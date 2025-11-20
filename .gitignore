@@ -1,0 +1,6 @@
+.venv/
+models/
+.git/
+models/m3e-base/model.safetensors
+models/m3e-base/pytorch_model.bin
+

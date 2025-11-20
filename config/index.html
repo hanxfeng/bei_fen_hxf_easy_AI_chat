@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>现代聊天室</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- 1. 全局和重置 --- */
+        :root {
+            --brand-color: #007bff;
+            --brand-hover: #0056b3;
+            --bg-light: #f7f8fa;
+            --bg-white: #ffffff;
+            --border-color: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --user-bubble: var(--brand-color);
+            --ai-bubble: #e9ecef;
+            --ai-bubble-text: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 16px;
+        }
+
+        /* --- 2. 聊天容器 --- */
+        .chat-container {
+            width: 100%;
+            max-width: 700px;
+            height: 90vh; /* 留出一些边距 */
+            max-height: 800px;
+            background-color: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        /* --- 3. 聊天头部 --- */
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .chat-header h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .gear-icon {
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s, transform 0.3s ease;
+        }
+
+        .gear-icon:hover {
+            color: var(--brand-color);
+            transform: rotate(45deg);
+        }
+
+        /* --- 4. 聊天消息区 (ID #response 被保留) --- */
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            /* 保留换行符 */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .message-name {
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-bubble);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .ai-message {
+            align-self: flex-start;
+            background-color: var(--ai-bubble);
+            color: var(--ai-bubble-text);
+            border-bottom-left-radius: 5px;
+        }
+
+        /* --- 5. 输入区域 --- */
+        .input-area {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-start; /* 允许 textarea 换行时对齐 */
+            gap: 12px;
+            background-color: var(--bg-white);
+        }
+
+        textarea#prompt {
+            flex-grow: 1;
+            padding: 12px 16px;
+            font-size: 1rem;
+            font-family: inherit;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            resize: vertical; /* 保留垂直缩放 */
+            min-height: 50px; /* 最小高度 */
+            height: 50px; /* 默认高度 */
+            max-height: 200px; /* 最大高度 */
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        textarea#prompt:focus {
+            outline: none;
+            border-color: var(--brand-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+        }
+        
+        /* 保持按钮 ID 和 onclick 不变 */
+        button#send-button {
+            flex-shrink: 0;
+            padding: 0 24px;
+            height: 50px;
+            background-color: var(--brand-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+
+        button#send-button:hover {
+            background-color: var(--brand-hover);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+        }
+        
+        button#send-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* --- 6. 设置面板 (ID #settings 被保留) --- */
+        /* 这是一个遮罩层 */
+        .settings-overlay {
+            position: fixed;
+            inset: 0; /* top/right/bottom/left: 0 */
+            background-color: rgba(0, 0, 0, 0.4);
+            display: none; /* JS 会切换这个 */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        /* 真正的设置面板 */
+        .settings-panel {
+            background-color: var(--bg-white);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .settings-panel h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .name-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .name-inputs input {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        
+        .name-inputs input:focus {
+             outline: none;
+            border-color: var(--brand-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+        }
+
+        /* 设置面板中的保存按钮 */
+        .settings-panel button {
+            padding: 12px;
+            background-color: var(--brand-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .settings-panel button:hover {
+            background-color: var(--brand-hover);
+        }
+
+    </style>
+</head>
+<body>
+    
+    <div class="chat-container">
+        <header class="chat-header">
+            <h1>AI 助手</h1>
+            <div class="gear-icon" onclick="toggleSettings()">⚙️</div>
+        </header>
+
+        <div class="chat-messages" id="response">
+            </div>
+
+        <footer class="input-area">
+            <textarea placeholder="按回车输入，shift+回车换行" id="prompt"></textarea>
+            <button id="send-button" onclick="generateResponse()">生成</button>
+        </footer>
+    </div>
+
+    <div class="settings-overlay" id="settings">
+        <div class="settings-panel">
+            <h2>设置</h2>
+            <div class="name-inputs">
+                <input type="text" id="userName" placeholder="你的名称" />
+                <input type="text" id="aiName" placeholder="AI 名称" />
+            </div>
+            <button onclick="saveSettings()">保存并关闭</button>
+        </div>
+    </div>
+
+
+    <script>
+        let conversationHistory = [];  // 用于保存对话历史
+        let isGenerating = false;  // 追踪 AI 是否在回答
+        let controller = null;  // 控制 fetch 以支持中断
+
+        // 初始化设置：从 localStorage 获取保存的用户名称和 AI 名称
+        window.onload = function() {
+            const savedUserName = localStorage.getItem('userName');
+            const savedAiName = localStorage.getItem('aiName');
+
+            if (savedUserName) {
+                document.getElementById("userName").value = savedUserName;
+            }
+            if (savedAiName) {
+                document.getElementById("aiName").value = savedAiName;
+            }
+
+            // 加载聊天记录
+            loadChatHistory();
+        };
+
+        // 切换设置面板显示/隐藏
+        function toggleSettings() {
+            const settingsPanel = document.getElementById('settings');
+            // 新的设计使用 flex 居中
+            settingsPanel.style.display = (settingsPanel.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        // 保存设置到 localStorage
+        function saveSettings() {
+            const userName = document.getElementById("userName").value.trim();
+            const aiName = document.getElementById("aiName").value.trim();
+
+            if (userName) {
+                localStorage.setItem('userName', userName);
+            }
+            if (aiName) {
+                localStorage.setItem('aiName', aiName);
+            }
+
+            toggleSettings();  // 关闭设置面板
+        }
+
+        // 加载聊天记录
+        function loadChatHistory() {
+            fetch('/get_chat_history')  // 从后端获取聊天记录
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.history) {
+                        const responseDiv = document.getElementById("response");
+                        responseDiv.innerHTML = "";  // 清空现有内容
+
+                        // 遍历历史消息并显示
+                        data.history.forEach(message => {
+                            const div = document.createElement('div');
+                            div.classList.add('message');
+
+                            // 根据 role 判断显示用户还是 AI 的消息
+                            if (message.role === 'user') {
+                                div.classList.add('user-message');
+                                // [设计调整] 将名称和内容分开，更美观
+                                div.innerHTML = `<div class="message-name">用户</div>${message.content}`;
+                            } else if (message.role === 'assistant') {
+                                div.classList.add('ai-message');
+                                // [设计调整] 将名称和内容分开
+                                div.innerHTML = `<div class="message-name">AI</div>${message.content}`;
+                            }
+
+                            responseDiv.appendChild(div);
+                        });
+                        // 滚动到底部
+                        responseDiv.scrollTop = responseDiv.scrollHeight;
+                    }
+                })
+                .catch(error => console.error("加载聊天记录失败:", error));
+        }
+
+        document.getElementById("prompt").addEventListener("keydown", function (event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                generateResponse();
+            }
+        });
+
+        async function generateResponse() {
+            const promptInput = document.getElementById("prompt");
+            const responseDiv = document.getElementById("response");
+            
+            // [!!] BUG 修复：
+            // 原: const sendButton = document.querySelector("button"); (会选中 "保存" 按钮)
+            // 新: 使用 ID 精确选中
+            const sendButton = document.getElementById("send-button");
+
+            if (isGenerating) {
+                stopResponse();
+                return;
+            }
+
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                alert("请输入内容！");
+                return;
+            }
+
+            const userName = localStorage.getItem('userName') || "用户";
+            const aiName = localStorage.getItem('aiName') || "AI";
+
+            // 开始生成：禁用输入框 & 更新按钮文本
+            isGenerating = true;
+            promptInput.disabled = true;
+            sendButton.innerText = "停止";
+            sendButton.disabled = true; // 样式上也禁用
+
+            // 显示用户输入
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message user-message';
+            // [设计调整] 使用 innerHTML 添加名称标签
+            userMessageDiv.innerHTML = `<div class="message-name">${userName}</div>${prompt}`;
+            responseDiv.appendChild(userMessageDiv);
+            
+            // 清空输入框
+            promptInput.value = ""; 
+            promptInput.style.height = '50px'; // 重置高度
+
+            // 保存用户输入
+            conversationHistory.push({ role: 'user', content: prompt });
+            
+            // 滚动到底部
+            responseDiv.scrollTop = responseDiv.scrollHeight;
+
+            // 创建 AI 回答区域
+            const aiMessageDiv = document.createElement('div');
+            aiMessageDiv.className = 'message ai-message';
+            // [设计调整] 先只显示名字和加载中
+            aiMessageDiv.innerHTML = `<div class="message-name">${aiName}</div>...`;
+            responseDiv.appendChild(aiMessageDiv);
+            
+            // 滚动到底部
+            responseDiv.scrollTop = responseDiv.scrollHeight;
+
+            controller = new AbortController();
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conversation: conversationHistory }),
+                    signal: controller.signal
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                // [!!] 重要：保留你原有的流式解析逻辑
+                // 你的 `data.split('"')[3]` 逻辑被保留在下面
+                // 假设后端每次流式推送的是完整的、不断增长的消息体
+                
+                const stream = new ReadableStream({
+                    start(controller) {
+                        function push() {
+                            reader.read().then(({ done, value }) => {
+                                if (done) {
+                                    controller.close();
+                                    return;
+                                }
+                                const chunk = decoder.decode(value, { stream: true });
+
+                                try {
+                                    const data = chunk;
+                                    // [!!] 保留你原有的解析逻辑
+                                    // 这一行假定 `data` 包含了完整的消息
+                                    const content = data.split('"')[3];
+                                    
+                                    // [设计调整] 更新 innerHTML
+                                    aiMessageDiv.innerHTML = `<div class="message-name">${aiName}</div>${content}`;
+                                    
+                                    // 实时滚动到底部
+                                    responseDiv.scrollTop = responseDiv.scrollHeight;
+
+                                    if (data.done) controller.close();
+                                } catch (e) {
+                                    console.error("Error parsing data:", e);
+                                }
+
+                                push();
+                            });
+                        }
+                        push();
+                    }
+                });
+
+                await new Response(stream).text();
+            } catch (error) {
+                if (error.name === "AbortError") {
+                    aiMessageDiv.innerHTML += "\n(回答已停止)";
+                } else {
+                    aiMessageDiv.innerHTML += `\n(请求失败: ${error})`;
+                }
+            } finally {
+                isGenerating = false;
+                promptInput.disabled = false;
+                sendButton.innerText = "生成";
+                sendButton.disabled = false; // 恢复按钮
+                
+                // 最终再滚动一次
+                responseDiv.scrollTop = responseDiv.scrollHeight;
+            }
+        }
+
+        // 停止生成回答
+        function stopResponse() {
+            if (controller) {
+                controller.abort();
+            }
+            isGenerating = false;
+            
+            // [!!] BUG 修复：
+            // 原: document.querySelector("button").innerText = "生成";
+            // 新: 使用 ID 精确选中
+            const sendButton = document.getElementById("send-button");
+            sendButton.innerText = "生成";
+            sendButton.disabled = false;
+            document.getElementById("prompt").disabled = false;
+        }
+
+        /* [!] JS 功能微调：为了实现更好的气泡消息，
+           我将 `innerText` 修改为了 `innerHTML` 来插入一个单独的 "name" 标签。
+           我还稍微修改了 `loadChatHistory` 和 `generateResponse` 中
+           创建消息的部分，使其适应新的 HTML 结构 (`<div class="message-name">...</div>...`)
+           这是为了美观而做的最小改动，不影响核心逻辑。
+        */
+    </script>
+</body>
+</html>
