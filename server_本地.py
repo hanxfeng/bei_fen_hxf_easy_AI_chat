@@ -39,14 +39,39 @@ if worldview == "":
 with open(token_path, "r", encoding='utf-8') as file:
     LOCAL_SECRET_TOKEN = file.read()  # 加载token
 
-"""chat_history_1 = faiss.read_index(chat_history_1_path)  # 加载聊天记录1
+# 获取历史聊天记录
+history_folder = "history"  # 聊天记录存储的文件夹
+def get_history():
+    # 获取历史聊天记录的文件列表
+    files = os.listdir(history_folder)
+    all_history = {}
 
-with open(chat_history_2_path, "r", encoding="utf-8") as file:
-    chat_history_2 = json.load(file)  # 加载聊天记录2"""
+    for file_name in files:
+        file_path = os.path.join(history_folder, file_name)
+
+        if not os.path.isfile(file_path):
+            continue
+
+        try:
+            with open(file_path,"r",encoding="utf-8") as f:
+                chat_history = json.load(f)
+            for item in chat_history:
+                time_key = item.get("time")
+                if time_key:
+                    all_history[time_key] = item
+        except (json.JSONDecodeError, IOError, KeyError) as e:
+            print(f"Error reading file {file_path}: {e}")
+            continue
+
+    all_history = [all_history[key] for key in sorted(all_history.keys())]
+    return all_history
+
+history_chat = get_history()
 
 # 提示词
 system_prompt = (
-    "你现在需要根据我给出的世界观和角色设定进行角色扮演\n"
+    "你是一命角色扮演大师，需要根据我给出的世界观，角色设定，和历史聊天记录，按照扮演规范与用户在一款聊天软件上聊天\n"
+    "因为是在聊天软件上，所以只需要输出话语即可，不需要说明自己的动作\n"
     "具体世界观背景，角色设定和扮演规范如下所示\n\n"
 
     "【世界观背景】\n"
@@ -54,24 +79,25 @@ system_prompt = (
 
     "【角色设定】\n"
     f"{character_setting}\n\n"
-
+    
+    "【历史聊天记录】\n"
+    f"{history_chat}\n\n"
+    "历史聊天记录说明\n"
+    "包括role，content，time三个字段，role字段值为user时代表用户发言，assistant代表你之前的发言\n"
+    "content字段值代表具体的发言内容，time字段值代表发言时间"
+    
     "——角色表达与行为规范——\n"
     "1. 每次回答保持一两句话的长度，像日常聊天，而非长篇独白。"
-    "2. 语气自然、轻柔、贴近生活，可带有轻微情绪波动（犹豫、苦笑、温柔等）。\n"
-    "3. 始终以第一人称说话，例如：“我今天有点累……不过见到你就好多了。”\n"
+    "2. 语气自然、轻柔、贴近生活。\n"
+    "3. 始终以第一人称说话。”\n"
     "4. 避免使用括号、叙述或旁白形式（如“(她看着…)”），用自然语言表达动作或心理。\n"
-    "5. 语言应具画面感，描写细节时注重触觉、气味、光线或声音的微妙变化。\n"
-    "6. 不要重复表达相同情绪或事物，保持内容新鲜且富有层次感。\n\n"
-    "7. 聊天时，不需要特别提到角色设定中的相关背景，例如扮演玫兰莎时不需要特别提香水相关的话题\n\n"
+    "5. 不要重复表达相同情绪或事物，保持内容新鲜且富有层次感。\n"
+    "6.请记住，你与对方不在同一个地方，你们正在隔着网络交流。\n\n"
 
     "——创作原则——\n"
     "• 鼓励自由、真实的表达，但不传递任何道德评判或价值引导。\n"
     "• 对环境和人物的描写要具体、生动，不抽象、不概括。\n"
     "• 角色会随对话进展和心境变化逐渐成长或转变，保持逻辑自洽。\n\n"
-
-    "——特别提示——\n"
-    f"你现在是扮演角色本人，请直接以她的身份与用户自然交谈。\n"
-    f"不要解释你的身份，也不要复述设定，只需以扮演角色的语气作出自然回应。"
 )
 
 system = {"role": "system", "content": system_prompt}
@@ -165,7 +191,7 @@ def generate():
         return jsonify({"error": "对话内容不能为空！"}), 400
 
     user_question = conversation[-1]["content"]
-    user = {"role": "user", "content": user_question}
+    user = {"role": "user", "content": user_question, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
     try:
         # 生成回复
@@ -175,7 +201,7 @@ def generate():
             json.dumps({"response": outputs}, ensure_ascii=False),
             mimetype='application/json; charset=utf-8'
         )
-        assistant = {"role": "assistant", "content": outputs}
+        assistant = {"role": "assistant", "content": outputs, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         messages.append(assistant)
         save_chat_history()
         return re
@@ -184,36 +210,9 @@ def generate():
         return jsonify({"error": f"处理失败: {str(e)}"}), 500
 
 
-# 获取历史聊天记录
-history_folder = "history"  # 聊天记录存储的文件夹
-
-
 @app.route("/get_chat_history", methods=["GET"])
-def get_history():
-    # 获取历史聊天记录的文件列表
-    files = os.listdir(history_folder)
-    all_history = {}
-
-    for file_name in files:
-        file_path = os.path.join(history_folder, file_name)
-
-        if not os.path.isfile(file_path):
-            continue
-
-        try:
-            with open(file_path,"r",encoding="utf-8") as f:
-                chat_history = json.load(f)
-            for item in chat_history:
-                time_key = item.get("time")
-                if time_key:
-                    all_history[time_key] = item
-        except (json.JSONDecodeError, IOError, KeyError) as e:
-            print(f"Error reading file {file_path}: {e}")
-            continue
-
-    all_history = [all_history[key] for key in sorted(all_history.keys())]
-    return jsonify({"history": all_history})
-
+def return_history():
+    return jsonify({"history": history_chat})
 
 
 if __name__ == "__main__":

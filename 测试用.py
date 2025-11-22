@@ -1,9 +1,8 @@
 import os
 import json
+from flask import jsonify
 
-history_folder = "history" # 聊天记录存储的文件夹
-
-
+history_folder = "history"
 def get_history():
     # 获取历史聊天记录的文件列表
     files = os.listdir(history_folder)
@@ -26,7 +25,7 @@ def get_history():
             print(f"Error reading file {file_path}: {e}")
             continue
 
-    return [all_history[key] for key in sorted(all_history.keys())]
+    all_history = [all_history[key] for key in sorted(all_history.keys())]
+    return jsonify({"history": all_history})
 
-if __name__ == '__main__':
-    print(get_history())
+print(get_history())

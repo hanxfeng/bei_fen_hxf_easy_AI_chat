@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 
     <style>
-        /* --- 1. 全局和重置 --- */
+        /* --- 1 & 2. 全局, 容器 (无变化) --- */
         :root {
             --brand-color: #007bff;
             --brand-hover: #0056b3;
@@ -22,13 +22,7 @@
             --ai-bubble: #e9ecef;
             --ai-bubble-text: #333;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Noto Sans SC', sans-serif;
             background-color: var(--bg-light);
@@ -39,20 +33,12 @@
             height: 100vh;
             padding: 16px;
         }
-
-        /* --- 2. 聊天容器 --- */
         .chat-container {
-            width: 100%;
-            max-width: 700px;
-            height: 90vh; /* 留出一些边距 */
-            max-height: 800px;
-            background-color: var(--bg-white);
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
+            width: 100%; max-width: 700px; height: 90vh;
+            max-height: 800px; background-color: var(--bg-white);
+            border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+            display: flex; flex-direction: column;
+            overflow: hidden; border: 1px solid var(--border-color);
         }
 
         /* --- 3. 聊天头部 --- */
@@ -64,11 +50,30 @@
             align-items: center;
             flex-shrink: 0;
         }
-        
+
+        /* [!!] 新增：标题容器，用于容纳 标题 和 指示器 */
+        .title-container {
+            display: flex;
+            align-items: baseline; /* 文本基线对齐 */
+            gap: 8px;
+            flex-grow: 1;
+            overflow: hidden; /* 防止指示器过长时溢出 */
+        }
+
         .chat-header h1 {
             font-size: 1.25rem;
             font-weight: 700;
-            color: var(--text-primary);
+            flex-shrink: 0; /* 防止标题被挤压 */
+        }
+
+        /* [!!] 新增：头部 "正在输入" 指示器样式 */
+        .header-typing-indicator {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            font-weight: 400; /* 比标题轻 */
+            white-space: nowrap; /* 不换行 */
+            display: none; /* 默认隐藏 */
         }
 
         .gear-icon {
@@ -76,195 +81,157 @@
             color: var(--text-secondary);
             cursor: pointer;
             transition: color 0.2s, transform 0.3s ease;
+            flex-shrink: 0; /* 防止图标被挤压 */
         }
+        .gear-icon:hover { color: var(--brand-color); transform: rotate(45deg); }
 
-        .gear-icon:hover {
-            color: var(--brand-color);
-            transform: rotate(45deg);
-        }
-
-        /* --- 4. 聊天消息区 (ID #response 被保留) --- */
+        /* --- 4. 聊天消息区 --- */
         .chat-messages {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            scroll-behavior: smooth;
+            flex-grow: 1; overflow-y: auto; padding: 24px;
+            display: flex; flex-direction: column;
+            gap: 20px; scroll-behavior: smooth;
         }
-
+        .message-wrapper {
+            display: flex; align-items: flex-start; gap: 12px;
+            max-width: 85%;
+        }
+        .avatar-img {
+            width: 40px; height: 40px; border-radius: 50%;
+            object-fit: cover; flex-shrink: 0;
+            border: 1px solid var(--border-color);
+        }
+        .bubble-time-container {
+            display: flex; flex-direction: column; gap: 4px;
+        }
         .message {
-            display: flex;
-            flex-direction: column;
-            max-width: 80%;
-            padding: 12px 18px;
-            border-radius: 20px;
-            line-height: 1.6;
-            font-size: 0.95rem;
-            /* 保留换行符 */
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            padding: 12px 18px; border-radius: 20px;
+            line-height: 1.6; font-size: 0.95rem;
+            white-space: pre-wrap; word-wrap: break-word;
         }
-
-        .message-name {
-            font-weight: 700;
-            font-size: 0.8rem;
-            margin-bottom: 4px;
-            opacity: 0.8;
+        .message-wrapper.user {
+            flex-direction: row-reverse; align-self: flex-end;
         }
-
+        .message-wrapper.user .bubble-time-container { align-items: flex-end; }
         .user-message {
-            align-self: flex-end;
-            background-color: var(--user-bubble);
-            color: white;
+            background-color: var(--user-bubble); color: white;
             border-bottom-right-radius: 5px;
         }
-        
+        .message-wrapper.ai {
+            flex-direction: row; align-self: flex-start;
+        }
+        .message-wrapper.ai .bubble-time-container { align-items: flex-start; }
         .ai-message {
-            align-self: flex-start;
-            background-color: var(--ai-bubble);
-            color: var(--ai-bubble-text);
+            background-color: var(--ai-bubble); color: var(--ai-bubble-text);
             border-bottom-left-radius: 5px;
         }
+        .message-content { /* 继承 .message 样式 */ }
+        .message-time {
+            font-size: 0.75rem; color: var(--text-secondary);
+            opacity: 0.8; padding: 0 8px;
+        }
 
-        /* --- 5. 输入区域 --- */
+        /* [!!] 移除：原先在聊天窗口中的 .typing-indicator 样式 */
+        /* .typing-indicator { ... } */
+        /* .typing-indicator-text { ... } */
+
+        /* --- 5. 输入区域 (无变化) --- */
         .input-area {
-            padding: 16px;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            align-items: flex-start; /* 允许 textarea 换行时对齐 */
-            gap: 12px;
+            padding: 16px; border-top: 1px solid var(--border-color);
+            display: flex; align-items: flex-start; gap: 12px;
             background-color: var(--bg-white);
         }
-
         textarea#prompt {
-            flex-grow: 1;
-            padding: 12px 16px;
-            font-size: 1rem;
-            font-family: inherit;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            resize: vertical; /* 保留垂直缩放 */
-            min-height: 50px; /* 最小高度 */
-            height: 50px; /* 默认高度 */
-            max-height: 200px; /* 最大高度 */
+            flex-grow: 1; padding: 12px 16px; font-size: 1rem;
+            font-family: inherit; border: 1px solid var(--border-color);
+            border-radius: 8px; resize: vertical; min-height: 50px;
+            height: 50px; max-height: 200px;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-
         textarea#prompt:focus {
-            outline: none;
-            border-color: var(--brand-color);
+            outline: none; border-color: var(--brand-color);
             box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
         }
-        
-        /* 保持按钮 ID 和 onclick 不变 */
         button#send-button {
-            flex-shrink: 0;
-            padding: 0 24px;
-            height: 50px;
-            background-color: var(--brand-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
+            flex-shrink: 0; padding: 0 24px; height: 50px;
+            background-color: var(--brand-color); color: white;
+            border: none; border-radius: 8px; cursor: pointer;
+            font-size: 1rem; font-weight: 500;
             transition: background-color 0.2s, box-shadow 0.2s;
         }
-
         button#send-button:hover {
             background-color: var(--brand-hover);
             box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
         }
-        
-        button#send-button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
+        button#send-button:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        /* --- 6. 设置面板 (ID #settings 被保留) --- */
-        /* 这是一个遮罩层 */
+        /* --- 6. 设置面板 (无变化) --- */
         .settings-overlay {
-            position: fixed;
-            inset: 0; /* top/right/bottom/left: 0 */
+            position: fixed; inset: 0;
             background-color: rgba(0, 0, 0, 0.4);
-            display: none; /* JS 会切换这个 */
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            display: none; justify-content: center;
+            align-items: center; z-index: 1000;
         }
-
-        /* 真正的设置面板 */
         .settings-panel {
-            background-color: var(--bg-white);
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+            background-color: var(--bg-white); padding: 24px;
+            border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            width: 90%; max-width: 400px; display: flex;
+            flex-direction: column; gap: 16px;
         }
-        
         .settings-panel h2 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            text-align: center;
+            font-size: 1.2rem; font-weight: 700;
+            margin-bottom: 8px; text-align: center;
         }
-
-        .name-inputs {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
+        .name-inputs { display: flex; flex-direction: column; gap: 12px; }
         .name-inputs input {
-            width: 100%;
-            padding: 10px 14px;
-            font-size: 0.95rem;
-            border: 1px solid #ccc;
-            border-radius: 8px;
+            width: 100%; padding: 10px 14px; font-size: 0.95rem;
+            border: 1px solid #ccc; border-radius: 8px;
         }
-        
         .name-inputs input:focus {
-             outline: none;
-            border-color: var(--brand-color);
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+             outline: none; border-color: var(--brand-color);
+             box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
         }
-
-        /* 设置面板中的保存按钮 */
-        .settings-panel button {
-            padding: 12px;
-            background-color: var(--brand-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
+        .avatar-settings {
+            display: flex; justify-content: space-around;
+            text-align: center; gap: 16px;
+        }
+        .avatar-setting {
+            display: flex; flex-direction: column;
+            align-items: center; gap: 8px;
+        }
+        .avatar-preview {
+            width: 60px; height: 60px; border-radius: 50%;
+            object-fit: cover; border: 2px solid var(--border-color);
+        }
+        .avatar-setting input[type="file"] { display: none; }
+        .avatar-setting label {
+            padding: 6px 12px; background-color: var(--bg-light);
+            border: 1px solid var(--border-color); border-radius: 6px;
+            cursor: pointer; font-size: 0.85rem;
             transition: background-color 0.2s;
         }
-
-        .settings-panel button:hover {
-            background-color: var(--brand-hover);
+        .avatar-setting label:hover { background-color: #e2e6ea; }
+        .settings-panel button {
+            padding: 12px; background-color: var(--brand-color);
+            color: white; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 1rem; font-weight: 500;
+            transition: background-color 0.2s;
         }
+        .settings-panel button:hover { background-color: var(--brand-hover); }
 
     </style>
 </head>
 <body>
-    
+
     <div class="chat-container">
         <header class="chat-header">
-            <h1>AI 助手</h1>
+            <div class="title-container">
+                <h1>AI 助手</h1>
+                <span class="header-typing-indicator" id="header-typing-indicator"></span>
+            </div>
             <div class="gear-icon" onclick="toggleSettings()">⚙️</div>
         </header>
 
-        <div class="chat-messages" id="response">
-            </div>
-
+        <div class="chat-messages" id="response"></div>
         <footer class="input-area">
             <textarea placeholder="按回车输入，shift+回车换行" id="prompt"></textarea>
             <button id="send-button" onclick="generateResponse()">生成</button>
@@ -278,82 +245,160 @@
                 <input type="text" id="userName" placeholder="你的名称" />
                 <input type="text" id="aiName" placeholder="AI 名称" />
             </div>
+            <hr style="border: none; border-top: 1px solid var(--border-color);">
+            <div class="avatar-settings">
+                <div class="avatar-setting">
+                    <img src="" alt="User Avatar" class="avatar-preview" id="userAvatarPreview">
+                    <label for="userAvatarInput">选择你的头像</label>
+                    <input type="file" id="userAvatarInput" accept="image/*" onchange="previewImage(event, 'userAvatarPreview')">
+                </div>
+                <div class="avatar-setting">
+                    <img src="" alt="AI Avatar" class="avatar-preview" id="aiAvatarPreview">
+                    <label for="aiAvatarInput">选择AI头像</label>
+                    <input type="file" id="aiAvatarInput" accept="image/*" onchange="previewImage(event, 'aiAvatarPreview')">
+                </div>
+            </div>
             <button onclick="saveSettings()">保存并关闭</button>
         </div>
     </div>
 
 
     <script>
-        let conversationHistory = [];  // 用于保存对话历史
-        let isGenerating = false;  // 追踪 AI 是否在回答
-        let controller = null;  // 控制 fetch 以支持中断
+        // (常量, 辅助函数, onload, settings 等均无变化)
+        const DEFAULT_USER_AVATAR = './default-user.png';
+        const DEFAULT_AI_AVATAR = './default-ai.png';
 
-        // 初始化设置：从 localStorage 获取保存的用户名称和 AI 名称
+        let conversationHistory = [];
+        let isGenerating = false;
+        let controller = null;
+
+        function formatDisplayTime(timeString) {
+            if (!timeString) return "";
+            try {
+                let time = new Date(timeString);
+                if (isNaN(time.getTime())) {
+                    if(typeof timeString === 'string') {
+                        time = new Date(timeString.replace(' ', 'T'));
+                    }
+                    if (isNaN(time.getTime())) return "";
+                }
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const timeDate = new Date(time.getFullYear(), time.getMonth(), time.getDate());
+                const addLeadingZero = (num) => num < 10 ? '0' + num : String(num);
+                const hours = addLeadingZero(time.getHours());
+                const minutes = addLeadingZero(time.getMinutes());
+                const timeHM = `${hours}:${minutes}`;
+                if (timeDate.getTime() === today.getTime()) {
+                    const period = time.getHours() < 12 ? '上午' : '下午';
+                    const displayHours = addLeadingZero(time.getHours() % 12 === 0 ? 12 : time.getHours() % 12);
+                    return `${period} ${displayHours}:${minutes}`;
+                } else if (timeDate.getTime() === yesterday.getTime()) {
+                    return `昨天 ${timeHM}`;
+                } else if (time.getFullYear() === now.getFullYear()) {
+                    const month = time.getMonth() + 1;
+                    const day = time.getDate();
+                    return `${month}月${day}日 ${timeHM}`;
+                } else {
+                    const year = time.getFullYear();
+                    const month = time.getMonth() + 1;
+                    const day = time.getDate();
+                    return `${year}年${month}月${day}日 ${timeHM}`;
+                }
+            } catch (e) {
+                console.error("时间格式化失败:", e, timeString);
+                return "";
+            }
+        }
+
         window.onload = function() {
-            const savedUserName = localStorage.getItem('userName');
-            const savedAiName = localStorage.getItem('aiName');
-
-            if (savedUserName) {
-                document.getElementById("userName").value = savedUserName;
-            }
-            if (savedAiName) {
-                document.getElementById("aiName").value = savedAiName;
-            }
-
-            // 加载聊天记录
+            const savedUserName = localStorage.getItem('userName') || "用户";
+            const savedAiName = localStorage.getItem('aiName') || "AI";
+            document.getElementById("userName").value = savedUserName;
+            document.getElementById("aiName").value = savedAiName;
+            const savedUserAvatar = localStorage.getItem('userAvatar') || DEFAULT_USER_AVATAR;
+            const savedAiAvatar = localStorage.getItem('aiAvatar') || DEFAULT_AI_AVATAR;
+            document.getElementById("userAvatarPreview").src = savedUserAvatar;
+            document.getElementById("aiAvatarPreview").src = savedAiAvatar;
             loadChatHistory();
         };
 
-        // 切换设置面板显示/隐藏
+        function previewImage(event, previewId) {
+            const input = event.target;
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById(previewId).src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
         function toggleSettings() {
             const settingsPanel = document.getElementById('settings');
-            // 新的设计使用 flex 居中
             settingsPanel.style.display = (settingsPanel.style.display === 'flex') ? 'none' : 'flex';
         }
-
-        // 保存设置到 localStorage
         function saveSettings() {
             const userName = document.getElementById("userName").value.trim();
             const aiName = document.getElementById("aiName").value.trim();
+            const userAvatarSrc = document.getElementById("userAvatarPreview").src;
+            const aiAvatarSrc = document.getElementById("aiAvatarPreview").src;
 
-            if (userName) {
-                localStorage.setItem('userName', userName);
+            if (userName) localStorage.setItem('userName', userName);
+            if (aiName) localStorage.setItem('aiName', aiName);
+            if (userAvatarSrc.startsWith('data:image') || userAvatarSrc.includes(DEFAULT_USER_AVATAR)) {
+                localStorage.setItem('userAvatar', userAvatarSrc);
             }
-            if (aiName) {
-                localStorage.setItem('aiName', aiName);
+            if (aiAvatarSrc.startsWith('data:image') || aiAvatarSrc.includes(DEFAULT_AI_AVATAR)) {
+                localStorage.setItem('aiAvatar', aiAvatarSrc);
             }
-
-            toggleSettings();  // 关闭设置面板
+            toggleSettings();
         }
 
-        // 加载聊天记录
         function loadChatHistory() {
-            fetch('/get_chat_history')  // 从后端获取聊天记录
+            const userAvatarSrc = localStorage.getItem('userAvatar') || DEFAULT_USER_AVATAR;
+            const aiAvatarSrc = localStorage.getItem('aiAvatar') || DEFAULT_AI_AVATAR;
+
+            fetch('/get_chat_history')
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.history) {
                         const responseDiv = document.getElementById("response");
-                        responseDiv.innerHTML = "";  // 清空现有内容
-
-                        // 遍历历史消息并显示
+                        responseDiv.innerHTML = "";
                         data.history.forEach(message => {
-                            const div = document.createElement('div');
-                            div.classList.add('message');
+                            const wrapper = document.createElement('div');
+                            wrapper.classList.add('message-wrapper');
+                            const avatar = document.createElement('img');
+                            avatar.classList.add('avatar-img');
+                            const bubbleTimeContainer = document.createElement('div');
+                            bubbleTimeContainer.classList.add('bubble-time-container');
+                            const bubble = document.createElement('div');
+                            bubble.classList.add('message');
+                            bubble.innerHTML = `<div class="message-content">${message.content}</div>`;
+                            const displayTime = formatDisplayTime(message.time);
+                            const timeDiv = document.createElement('div');
+                            timeDiv.className = 'message-time';
+                            timeDiv.innerText = displayTime;
 
-                            // 根据 role 判断显示用户还是 AI 的消息
                             if (message.role === 'user') {
-                                div.classList.add('user-message');
-                                // [设计调整] 将名称和内容分开，更美观
-                                div.innerHTML = `<div class="message-name">用户</div>${message.content}`;
+                                wrapper.classList.add('user');
+                                avatar.src = userAvatarSrc;
+                                avatar.alt = "User Avatar";
+                                bubble.classList.add('user-message');
                             } else if (message.role === 'assistant') {
-                                div.classList.add('ai-message');
-                                // [设计调整] 将名称和内容分开
-                                div.innerHTML = `<div class="message-name">AI</div>${message.content}`;
+                                wrapper.classList.add('ai');
+                                avatar.src = aiAvatarSrc;
+                                avatar.alt = "AI Avatar";
+                                bubble.classList.add('ai-message');
                             }
 
-                            responseDiv.appendChild(div);
+                            bubbleTimeContainer.appendChild(bubble);
+                            bubbleTimeContainer.appendChild(timeDiv);
+                            wrapper.appendChild(avatar);
+                            wrapper.appendChild(bubbleTimeContainer);
+                            responseDiv.appendChild(wrapper);
                         });
-                        // 滚动到底部
                         responseDiv.scrollTop = responseDiv.scrollHeight;
                     }
                 })
@@ -367,13 +412,10 @@
             }
         });
 
+        // [!!] 重大修改：generateResponse 函数
         async function generateResponse() {
             const promptInput = document.getElementById("prompt");
             const responseDiv = document.getElementById("response");
-            
-            // [!!] BUG 修复：
-            // 原: const sendButton = document.querySelector("button"); (会选中 "保存" 按钮)
-            // 新: 使用 ID 精确选中
             const sendButton = document.getElementById("send-button");
 
             if (isGenerating) {
@@ -387,43 +429,56 @@
                 return;
             }
 
-            const userName = localStorage.getItem('userName') || "用户";
+            const userAvatarSrc = localStorage.getItem('userAvatar') || DEFAULT_USER_AVATAR;
+            const aiAvatarSrc = localStorage.getItem('aiAvatar') || DEFAULT_AI_AVATAR;
             const aiName = localStorage.getItem('aiName') || "AI";
 
-            // 开始生成：禁用输入框 & 更新按钮文本
             isGenerating = true;
             promptInput.disabled = true;
             sendButton.innerText = "停止";
-            sendButton.disabled = true; // 样式上也禁用
+            sendButton.disabled = true;
 
-            // 显示用户输入
+            // [!!] 1. 显示头部 "正在输入"
+            const headerIndicator = document.getElementById('header-typing-indicator');
+            headerIndicator.innerText = `(对方正在输入中)`;
+            headerIndicator.style.display = 'inline';
+
+            // --- 2. 创建用户消息 (无变化) ---
+            const userTime = new Date();
+            const userMessageWrapper = document.createElement('div');
+            userMessageWrapper.className = 'message-wrapper user';
+            const userAvatar = document.createElement('img');
+            userAvatar.className = 'avatar-img';
+            userAvatar.src = userAvatarSrc;
+            userAvatar.alt = "User Avatar";
+            const userBubbleTimeContainer = document.createElement('div');
+            userBubbleTimeContainer.className = 'bubble-time-container';
             const userMessageDiv = document.createElement('div');
             userMessageDiv.className = 'message user-message';
-            // [设计调整] 使用 innerHTML 添加名称标签
-            userMessageDiv.innerHTML = `<div class="message-name">${userName}</div>${prompt}`;
-            responseDiv.appendChild(userMessageDiv);
-            
-            // 清空输入框
-            promptInput.value = ""; 
-            promptInput.style.height = '50px'; // 重置高度
-
-            // 保存用户输入
-            conversationHistory.push({ role: 'user', content: prompt });
-            
-            // 滚动到底部
+            userMessageDiv.innerHTML = `<div class="message-content">${prompt}</div>`;
+            const userTimeDiv = document.createElement('div');
+            userTimeDiv.className = 'message-time';
+            userTimeDiv.innerText = formatDisplayTime(userTime);
+            userBubbleTimeContainer.appendChild(userMessageDiv);
+            userBubbleTimeContainer.appendChild(userTimeDiv);
+            userMessageWrapper.appendChild(userAvatar);
+            userMessageWrapper.appendChild(userBubbleTimeContainer);
+            responseDiv.appendChild(userMessageWrapper);
+            promptInput.value = "";
+            promptInput.style.height = '50px';
+            conversationHistory.push({ role: 'user', content: prompt, time: userTime.toISOString() });
             responseDiv.scrollTop = responseDiv.scrollHeight;
 
-            // 创建 AI 回答区域
-            const aiMessageDiv = document.createElement('div');
-            aiMessageDiv.className = 'message ai-message';
-            // [设计调整] 先只显示名字和加载中
-            aiMessageDiv.innerHTML = `<div class="message-name">${aiName}</div>...`;
-            responseDiv.appendChild(aiMessageDiv);
-            
-            // 滚动到底部
-            responseDiv.scrollTop = responseDiv.scrollHeight;
+            // --- [!!] 3. 移除 "对方正在输入中..." (in-chat) 的创建逻辑 ---
+            // (原先在这里的代码已被删除)
 
+            // --- 4. 准备流式接收 ---
             controller = new AbortController();
+            let aiFinalContent = "";
+            let aiMessageWrapper = null;
+            let aiBubble = null;
+            let aiTimeDiv = null;
+            let isFirstChunk = true; // 标记是否为第一个数据块
 
             try {
                 const response = await fetch('/generate', {
@@ -432,14 +487,8 @@
                     body: JSON.stringify({ conversation: conversationHistory }),
                     signal: controller.signal
                 });
-
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-
-                // [!!] 重要：保留你原有的流式解析逻辑
-                // 你的 `data.split('"')[3]` 逻辑被保留在下面
-                // 假设后端每次流式推送的是完整的、不断增长的消息体
-                
                 const stream = new ReadableStream({
                     start(controller) {
                         function push() {
@@ -449,71 +498,120 @@
                                     return;
                                 }
                                 const chunk = decoder.decode(value, { stream: true });
-
                                 try {
                                     const data = chunk;
-                                    // [!!] 保留你原有的解析逻辑
-                                    // 这一行假定 `data` 包含了完整的消息
                                     const content = data.split('"')[3];
-                                    
-                                    // [设计调整] 更新 innerHTML
-                                    aiMessageDiv.innerHTML = `<div class="message-name">${aiName}</div>${content}`;
-                                    
-                                    // 实时滚动到底部
-                                    responseDiv.scrollTop = responseDiv.scrollHeight;
+                                    aiFinalContent = content;
+
+                                    // [!!] --- 关键逻辑：第一个数据块 ---
+                                    if (isFirstChunk) {
+                                        isFirstChunk = false;
+
+                                        // [!!] 1. 移除 (in-chat) 指示器的代码已被删除
+
+                                        // 2. 创建真正的 AI 气泡
+                                        aiMessageWrapper = document.createElement('div');
+                                        aiMessageWrapper.className = 'message-wrapper ai';
+                                        const aiAvatar = document.createElement('img');
+                                        aiAvatar.className = 'avatar-img';
+                                        aiAvatar.src = aiAvatarSrc;
+                                        aiAvatar.alt = "AI Avatar";
+                                        const aiBubbleTimeContainer = document.createElement('div');
+                                        aiBubbleTimeContainer.className = 'bubble-time-container';
+                                        aiBubble = document.createElement('div');
+                                        aiBubble.className = 'message ai-message';
+                                        aiTimeDiv = document.createElement('div');
+                                        aiTimeDiv.className = 'message-time';
+                                        aiTimeDiv.innerText = "";
+                                        aiBubbleTimeContainer.appendChild(aiBubble);
+                                        aiBubbleTimeContainer.appendChild(aiTimeDiv);
+                                        aiMessageWrapper.appendChild(aiAvatar);
+                                        aiMessageWrapper.appendChild(aiBubbleTimeContainer);
+                                        responseDiv.appendChild(aiMessageWrapper);
+                                    }
+
+                                    if (aiBubble) {
+                                        aiBubble.innerHTML = `<div class="message-content">${content}</div>`;
+                                        responseDiv.scrollTop = responseDiv.scrollHeight;
+                                    }
 
                                     if (data.done) controller.close();
-                                } catch (e) {
-                                    console.error("Error parsing data:", e);
-                                }
-
+                                } catch (e) { console.error("Error parsing data:", e); }
                                 push();
                             });
                         }
                         push();
                     }
                 });
-
                 await new Response(stream).text();
             } catch (error) {
                 if (error.name === "AbortError") {
-                    aiMessageDiv.innerHTML += "\n(回答已停止)";
+                    aiFinalContent = aiFinalContent ? aiFinalContent + "\n(回答已停止)" : "(回答已停止)";
                 } else {
-                    aiMessageDiv.innerHTML += `\n(请求失败: ${error})`;
+                    aiFinalContent = `(请求失败：${error})`;
                 }
             } finally {
                 isGenerating = false;
                 promptInput.disabled = false;
                 sendButton.innerText = "生成";
-                sendButton.disabled = false; // 恢复按钮
-                
-                // 最终再滚动一次
+                sendButton.disabled = false;
+
+                // [!!] 1. 隐藏头部 "正在输入"
+                const headerIndicator = document.getElementById('header-typing-indicator');
+                headerIndicator.style.display = 'none';
+                headerIndicator.innerText = '';
+
+                // [!!] 2. 移除 (in-chat) 指示器的代码已被删除
+
+                const aiTime = new Date();
+
+                // [!!] 3. 检查状态以更新或创建气泡 (逻辑不变)
+                if (isFirstChunk && aiFinalContent) {
+                    // --- 情况 A: 一条数据都没收到, 但有错误/停止信息 ---
+                    aiMessageWrapper = document.createElement('div');
+                    aiMessageWrapper.className = 'message-wrapper ai';
+                    const aiAvatar = document.createElement('img');
+                    aiAvatar.className = 'avatar-img';
+                    aiAvatar.src = aiAvatarSrc;
+                    aiAvatar.alt = "AI Avatar";
+                    const aiBubbleTimeContainer = document.createElement('div');
+                    aiBubbleTimeContainer.className = 'bubble-time-container';
+                    aiBubble = document.createElement('div');
+                    aiBubble.className = 'message ai-message';
+                    aiBubble.innerHTML = `<div class="message-content">${aiFinalContent}</div>`;
+                    aiTimeDiv = document.createElement('div');
+                    aiTimeDiv.className = 'message-time';
+                    aiTimeDiv.innerText = formatDisplayTime(aiTime); // 设置时间
+                    aiBubbleTimeContainer.appendChild(aiBubble);
+                    aiBubbleTimeContainer.appendChild(aiTimeDiv);
+                    aiMessageWrapper.appendChild(aiAvatar);
+                    aiMessageWrapper.appendChild(aiBubbleTimeContainer);
+                    responseDiv.appendChild(aiMessageWrapper);
+
+                } else if (!isFirstChunk) {
+                    // --- 情况 B: 至少收到了一条数据, 气泡已存在 ---
+                    if (aiBubble && aiFinalContent) {
+                         aiBubble.innerHTML = `<div class="message-content">${aiFinalContent}</div>`;
+                    }
+                    if (aiTimeDiv) {
+                        aiTimeDiv.innerText = formatDisplayTime(aiTime);
+                    }
+                }
+
+                // [!!] 4. 保存历史 (逻辑不变)
+                if (aiFinalContent) {
+                    conversationHistory.push({ role: 'assistant', content: aiFinalContent, time: aiTime.toISOString() });
+                }
+
                 responseDiv.scrollTop = responseDiv.scrollHeight;
             }
         }
 
-        // 停止生成回答
         function stopResponse() {
             if (controller) {
                 controller.abort();
             }
-            isGenerating = false;
-            
-            // [!!] BUG 修复：
-            // 原: document.querySelector("button").innerText = "生成";
-            // 新: 使用 ID 精确选中
-            const sendButton = document.getElementById("send-button");
-            sendButton.innerText = "生成";
-            sendButton.disabled = false;
-            document.getElementById("prompt").disabled = false;
         }
-
-        /* [!] JS 功能微调：为了实现更好的气泡消息，
-           我将 `innerText` 修改为了 `innerHTML` 来插入一个单独的 "name" 标签。
-           我还稍微修改了 `loadChatHistory` 和 `generateResponse` 中
-           创建消息的部分，使其适应新的 HTML 结构 (`<div class="message-name">...</div>...`)
-           这是为了美观而做的最小改动，不影响核心逻辑。
-        */
     </script>
 </body>
 </html>
