@@ -2,7 +2,7 @@
 const chatContainer = document.getElementById('chat-container');
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
-const loadHistoryBtn = document.getElementById('load-history-btn');
+// const loadHistoryBtn = document.getElementById('load-history-btn'); // <-- 已删除
 const typingIndicator = document.getElementById('typing-indicator');
 
 // 设置弹窗相关
@@ -156,6 +156,51 @@ function showSystemError(message) {
     appendMessage(message, 'system', new Date());
 }
 
+/**
+ * [新功能] 页面加载时自动获取聊天记录
+ */
+async function loadInitialHistory() {
+    if (!serverUrl || !serverToken) {
+        showSystemError("欢迎使用 PA4！请先在设置中配置服务器地址和 Token");
+        return;
+    }
+
+    typingIndicator.style.display = 'block'; // 显示加载中
+    
+    try {
+        const response = await fetch(`${serverUrl}/get_chat_history`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${serverToken}`
+            }
+        });
+
+        const data = await response.json();
+        if (response.ok && data.history && Array.isArray(data.history)) {
+            if (data.history.length === 0) {
+                showSystemError("没有历史聊天记录");
+            } else {
+                chatContainer.innerHTML = ''; // 清空当前聊天
+                lastMessageTimestamp = null; // 重置时间戳
+                data.history.forEach(msg => {
+                    // 假设历史记录 msg 对象有:
+                    // msg.content (内容)
+                    // msg.role ('user' 或 'ai')
+                    // msg.timestamp (ISO 格式的时间戳)
+                    appendMessage(msg.content, msg.role, msg.timestamp);
+                });
+            }
+        } else {
+            showSystemError(data.error || "加载历史记录失败");
+        }
+    } catch (error) {
+        showSystemError("请求失败：" + error.message);
+    } finally {
+        typingIndicator.style.display = 'none';
+    }
+}
+
 
 // --- 4. 事件监听器 ---
 
@@ -204,49 +249,7 @@ sendBtn.addEventListener('click', async () => {
     }
 });
 
-// 加载聊天记录
-loadHistoryBtn.addEventListener('click', async () => {
-    if (!serverUrl || !serverToken) {
-        showSystemError("请先在设置中配置服务器地址和 Token");
-        return;
-    }
-
-    typingIndicator.style.display = 'block'; // 显示加载中
-    
-    try {
-        const response = await fetch(`${serverUrl}/get_chat_history`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${serverToken}`
-            }
-        });
-
-        const data = await response.json();
-        if (response.ok && data.history && Array.isArray(data.history)) {
-            if (data.history.length === 0) {
-                showSystemError("没有聊天记录");
-            } else {
-                chatContainer.innerHTML = ''; // 清空当前聊天
-                lastMessageTimestamp = null; // 重置时间戳
-                data.history.forEach(msg => {
-                    // 假设历史记录 msg 对象有:
-                    // msg.content (内容)
-                    // msg.role ('user' 或 'ai')
-                    // msg.timestamp (ISO 格式的时间戳)
-                    appendMessage(msg.content, msg.role, msg.timestamp);
-                });
-            }
-        } else {
-            showSystemError(data.error || "加载历史记录失败");
-        }
-    } catch (error) {
-        showSystemError("请求失败：" + error.message);
-    } finally {
-        typingIndicator.style.display = 'none';
-    }
-});
-
+// 加载聊天记录 ( <-- 已删除按钮点击事件 )
 
 // --- 设置弹窗相关 ---
 settingsIcon.addEventListener('click', () => {
@@ -277,3 +280,8 @@ settingsModal.addEventListener('click', (e) => {
 // [新功能] 头像上传监听
 aiAvatarInput.addEventListener('change', (e) => handleAvatarChange(e, aiAvatarPreview, 'aiAvatarSrc'));
 userAvatarInput.addEventListener('change', (e) => handleAvatarChange(e, userAvatarPreview, 'userAvatarSrc'));
+
+
+// --- 5. [新功能] 自动执行 ---
+// 页面加载完毕后，自动执行加载历史记录的函数
+loadInitialHistory();
