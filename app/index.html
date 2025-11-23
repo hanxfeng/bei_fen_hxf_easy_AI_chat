@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PA4 聊天</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h2>PA4</h2>
+        <span id="settings-icon">⚙️</span> </header>
+
+    <div id="typing-indicator">对方正在输入中...</div>
+
+    <div class="chat-container" id="chat-container">
+        </div>
+
+    <div class="input-container">
+        <input type="text" id="message-input" placeholder="输入消息...">
+        <button id="send-btn">发送</button>
+        <button id="load-history-btn">加载记录</button>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay">
+        <div class="settings-box">
+            <h3>设置</h3>
+            
+            <input type="text" id="server-ip" placeholder="服务器地址 (如 http://127.0.0.1:8080)">
+            <input type="text" id="server-token" placeholder="授权 Token">
+
+            <div class="avatar-setting">
+                <label for="ai-avatar-input">
+                    AI 头像:
+                    <img src="default-ai.png" id="ai-avatar-preview" class="avatar-preview">
+                </label>
+                <input type="file" id="ai-avatar-input" accept="image/*" class="avatar-input">
+            </div>
+            
+            <div class="avatar-setting">
+                <label for="user-avatar-input">
+                    我的头像:
+                    <img src="default-user.png" id="user-avatar-preview" class="avatar-preview">
+                </label>
+                <input type="file" id="user-avatar-input" accept="image/*" class="avatar-input">
+            </div>
+
+            <button id="save-settings">保存设置</button>
+            <button id="close-settings" class="close-btn">关闭</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
