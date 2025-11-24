@@ -1,5 +1,6 @@
 package com.example.bxn
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -7,6 +8,7 @@ import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main) // 关联布局文件
@@ -17,7 +19,9 @@ class MainActivity : AppCompatActivity() {
         // 2. 启用 JavaScript (非常重要！否则 JS 无法运行)
         val webSettings: WebSettings = myWebView.settings
         webSettings.javaScriptEnabled = true
-
+        webSettings.allowFileAccess = true
+        webSettings.allowUniversalAccessFromFileURLs = true
+        webSettings.domStorageEnabled = true
         // 3. (可选) 设置 WebViewClient
         // 这能防止用户点击 HTML 里的链接时，跳转到外部浏览器，而是继续在 App 内打开
         myWebView.webViewClient = WebViewClient()
