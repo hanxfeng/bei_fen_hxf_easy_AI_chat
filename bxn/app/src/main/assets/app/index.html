@@ -12,20 +12,18 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         html, body {
             height: 100%;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: #f0f2f5;
             overflow: hidden;
         }
-
         body {
             display: flex;
             flex-direction: column;
         }
 
-        /* --- 1. 顶部栏 --- */
+        /* --- 顶部栏 --- */
         header {
             display: flex;
             justify-content: space-between;
@@ -34,20 +32,14 @@
             background-color: #ffffff;
             border-bottom: 1px solid #e0e0e0;
             flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 10;
         }
+        header h2 { font-size: 18px; font-weight: 600; }
+        #settings-icon { font-size: 24px; cursor: pointer; color: #555; }
 
-        header h2 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        #settings-icon {
-            font-size: 24px;
-            cursor: pointer;
-            color: #555;
-        }
-
-        /* --- 4. "正在输入" 提示 --- */
+        /* --- "正在输入" 提示 --- */
         #typing-indicator {
             display: none;
             padding: 8px 16px;
@@ -59,7 +51,7 @@
             border-bottom: 1px solid #e0e0e0;
         }
 
-        /* --- 2. 聊天容器 --- */
+        /* --- 聊天容器 --- */
         .chat-container {
             flex: 1;
             overflow-y: auto;
@@ -68,9 +60,7 @@
             flex-direction: column;
         }
 
-        /* --- 聊天消息 (核心) --- */
-
-        /* 2.1 时间戳 */
+        /* 2.1 居中时间戳 */
         .timestamp {
             text-align: center;
             color: #aaa;
@@ -78,12 +68,13 @@
             margin: 12px 0;
         }
 
-        /* 2.2 消息行 (头像 + 气泡) */
+        /* 2.2 消息行 */
         .message-wrapper {
             display: flex;
             align-items: flex-start;
             margin-bottom: 16px;
             max-width: 90%;
+            position: relative;
         }
 
         .avatar {
@@ -93,6 +84,13 @@
             object-fit: cover;
             flex-shrink: 0;
             cursor: pointer;
+            background-color: #eee;
+        }
+
+        .message-box {
+            display: flex;
+            flex-direction: column;
+            max-width: calc(100% - 52px);
         }
 
         .message-content {
@@ -101,6 +99,13 @@
             line-height: 1.5;
             font-size: 15px;
             word-break: break-word;
+            margin-bottom: 4px;
+        }
+
+        /* 气泡下方时间戳 */
+        .message-time {
+            color: #888;
+            font-size: 10px;
         }
 
         /* 3. 头像与气泡位置 */
@@ -112,12 +117,21 @@
         .message-wrapper.ai-message .avatar {
             margin-right: 12px;
         }
-        /* 确保 AI 消息气泡有明显的背景和边界 */
+        .message-wrapper.ai-message .message-box {
+            align-items: flex-start;
+        }
+
+        /* AI 气泡颜色 (白色 + 阴影) */
         .message-wrapper.ai-message .message-content {
             background-color: #ffffff;
             border: 1px solid #e0e0e0;
             color: #333;
             border-top-left-radius: 0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+
+        .message-wrapper.ai-message .message-time {
+             align-self: flex-start;
         }
 
         /* 用户消息 (右侧) */
@@ -128,32 +142,39 @@
         .message-wrapper.user-message .avatar {
             margin-left: 12px;
         }
+        .message-wrapper.user-message .message-box {
+            align-items: flex-end;
+        }
         .message-wrapper.user-message .message-content {
             background-color: #007bff;
             color: #ffffff;
             border-top-right-radius: 0;
         }
+        .message-wrapper.user-message .message-time {
+             align-self: flex-end;
+             color: #999;
+        }
 
-        /* 系统消息 (例如错误提示) */
+        /* 系统消息 */
         .message-wrapper.system-message {
             justify-content: center;
             align-self: center;
             max-width: 100%;
         }
         .message-wrapper.system-message .message-content {
-            background-color: #f8d7da;
+            background-color: #f8d7da; /* 红色提示 */
             color: #721c24;
             width: auto;
             max-width: 80%;
             text-align: center;
             border-radius: 8px;
         }
-        .message-wrapper.system-message .avatar {
+        .message-wrapper.system-message .avatar,
+        .message-wrapper.system-message .message-time {
             display: none;
         }
 
-
-        /* --- 3. 输入区域 --- */
+        /* --- 3. 输入区域 (保持不变) --- */
         .input-container {
             display: flex;
             padding: 10px 16px;
@@ -161,7 +182,6 @@
             border-top: 1px solid #e0e0e0;
             flex-shrink: 0;
         }
-
         #message-input {
             flex: 1;
             padding: 10px 12px;
@@ -171,10 +191,7 @@
             margin-right: 8px;
             outline: none;
         }
-        #message-input:focus {
-            border-color: #007bff;
-        }
-
+        #message-input:focus { border-color: #007bff; }
         .input-container button {
             padding: 0 16px;
             border: none;
@@ -185,12 +202,12 @@
             cursor: pointer;
             margin-left: 5px;
             white-space: nowrap;
+            height: 40px;
+            line-height: 40px;
         }
-        .input-container button:hover {
-            background-color: #0056b3;
-        }
+        .input-container button:hover { background-color: #0056b3; }
 
-        /* --- 5. 设置弹窗 --- */
+        /* --- 5. 设置弹窗 (保持不变) --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -203,7 +220,6 @@
             align-items: center;
             z-index: 1000;
         }
-
         .settings-box {
             background-color: white;
             padding: 24px;
@@ -214,12 +230,7 @@
             flex-direction: column;
             gap: 16px;
         }
-
-        .settings-box h3 {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
+        .settings-box h3 { text-align: center; margin-bottom: 10px; }
         .settings-box input[type="text"] {
             width: 100%;
             padding: 12px;
@@ -227,19 +238,13 @@
             border-radius: 8px;
             font-size: 14px;
         }
-
-        /* 头像设置 */
         .avatar-setting {
             display: flex;
             align-items: center;
             justify-content: space-between;
             font-size: 15px;
         }
-        .avatar-setting label {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-        }
+        .avatar-setting label { display: flex; align-items: center; }
         .avatar-preview {
             width: 40px;
             height: 40px;
@@ -249,16 +254,7 @@
             border: 1px solid #eee;
             cursor: pointer;
         }
-        .avatar-input {
-            display: none;
-        }
-        /* 提示文字样式 */
-        .avatar-hint {
-            font-size: 12px;
-            color: #888;
-        }
-
-
+        .avatar-hint { font-size: 12px; color: #888; }
         .settings-box button {
             padding: 12px;
             border: none;
@@ -266,18 +262,9 @@
             font-size: 16px;
             cursor: pointer;
         }
-        #save-settings {
-            background-color: #007bff;
-            color: white;
-        }
-        #load-history-manual {
-            background-color: #6c757d;
-            color: white;
-        }
-        .close-btn {
-            background-color: #f1f1f1;
-            color: #333;
-        }
+        #save-settings { background-color: #007bff; color: white; }
+        #load-history-manual { background-color: #6c757d; color: white; }
+        .close-btn { background-color: #f1f1f1; color: #333; }
     </style>
 </head>
 <body>
@@ -286,42 +273,32 @@
     <h2>PA4 聊天</h2>
     <span id="settings-icon">⚙️</span>
 </header>
-
 <div id="typing-indicator">对方正在输入中...</div>
-
 <div class="chat-container" id="chat-container">
 </div>
-
 <div class="input-container">
     <input type="text" id="message-input" placeholder="输入消息...">
     <button id="send-btn">发送</button>
 </div>
-
 <div id="settings-modal" class="modal-overlay">
     <div class="settings-box">
         <h3>设置</h3>
-
         <input type="text" id="server-ip" placeholder="服务器地址 (如 http://10.0.2.2:8080)">
         <input type="text" id="server-token" placeholder="授权 Token">
-
         <div class="avatar-setting">
-            <label for="ai-avatar-input">
+            <label>
                 AI 头像:
                 <img src="default-ai.png" id="ai-avatar-preview" class="avatar-preview">
             </label>
-            <input type="file" id="ai-avatar-input" accept="image/*" class="avatar-input">
-            <span class="avatar-hint">点击头像可更换</span>
+            <span class="avatar-hint">点击头像可更换 (原生)</span>
         </div>
-
         <div class="avatar-setting">
-            <label for="user-avatar-input">
+            <label>
                 我的头像:
                 <img src="default-user.png" id="user-avatar-preview" class="avatar-preview">
             </label>
-            <input type="file" id="user-avatar-input" accept="image/*" class="avatar-input">
-            <span class="avatar-hint">点击头像可更换</span>
+            <span class="avatar-hint">点击头像可更换 (原生)</span>
         </div>
-
         <button id="save-settings">保存设置</button>
         <button id="load-history-manual">手动加载记录</button>
         <button id="close-settings" class="close-btn">关闭</button>
@@ -329,13 +306,11 @@
 </div>
 
 <script>
-    // --- 1. DOM 元素获取 ---
+    // --- 1. DOM 元素获取 (保持不变) ---
     const chatContainer = document.getElementById('chat-container');
     const messageInput = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
     const typingIndicator = document.getElementById('typing-indicator');
-
-    // 设置弹窗相关
     const settingsIcon = document.getElementById('settings-icon');
     const settingsModal = document.getElementById('settings-modal');
     const serverIpInput = document.getElementById('server-ip');
@@ -343,57 +318,108 @@
     const saveSettingsBtn = document.getElementById('save-settings');
     const closeSettingsBtn = document.getElementById('close-settings');
     const loadHistoryManualBtn = document.getElementById('load-history-manual');
-
-    // 头像设置相关
-    const aiAvatarInput = document.getElementById('ai-avatar-input');
     const aiAvatarPreview = document.getElementById('ai-avatar-preview');
-    const userAvatarInput = document.getElementById('user-avatar-input');
     const userAvatarPreview = document.getElementById('user-avatar-preview');
 
-
-    // --- 2. 全局变量和配置加载 ---
-    let serverUrl = localStorage.getItem('serverUrl') || '';
-    let serverToken = localStorage.getItem('serverToken') || '';
-    serverIpInput.value = serverUrl;
-    serverTokenInput.value = serverToken;
-
+    // --- 2. 全局变量和配置加载 (保持不变) ---
     let aiAvatarSrc = localStorage.getItem('aiAvatarSrc') || 'default-ai.png';
     let userAvatarSrc = localStorage.getItem('userAvatarSrc') || 'default-user.png';
+
+    serverIpInput.value = localStorage.getItem('serverUrl') || '';
+    serverTokenInput.value = localStorage.getItem('serverToken') || '';
+
     aiAvatarPreview.src = aiAvatarSrc;
     userAvatarPreview.src = userAvatarSrc;
 
-    let lastMessageTimestamp = null;
+    aiAvatarPreview.onerror = () => { console.error("AI 预览头像加载失败, src:", aiAvatarPreview.src); };
+    userAvatarPreview.onerror = () => { console.error("User 预览头像加载失败, src:", userAvatarPreview.src); };
 
+    let lastMessageTimestamp = null;
 
     // --- 3. 核心功能函数 ---
 
+    /**
+     * 【BUG 1 修复】
+     * 通知 Android 端保存设置成功
+     * 修复：直接从 input 元素读取值，而不是使用不存在的全局变量
+     */
+    function notifyAndroidSettingsSaved() {
+        if (window.AndroidBridge && window.AndroidBridge.onSettingsSaved) {
+            // 直接读取 input 的当前值
+            window.AndroidBridge.onSettingsSaved(serverIpInput.value, serverTokenInput.value);
+        }
+    }
+
+    function notifyAndroidToUploadFile(fileType) {
+        if (window.AndroidBridge && window.AndroidBridge.openFileChooser) {
+            window.AndroidBridge.openFileChooser(fileType);
+        } else {
+            showSystemError("请在 Android 应用中点击头像进行更换！", false);
+        }
+    }
+
+    window.setAvatarSrc = function(role, newSrc) {
+        if (!newSrc) return;
+        if (role === 'ai') {
+            aiAvatarSrc = newSrc;
+            aiAvatarPreview.src = newSrc;
+            localStorage.setItem('aiAvatarSrc', newSrc);
+            showSystemError("AI 头像更新成功", false);
+        } else if (role === 'user') {
+            userAvatarSrc = newSrc;
+            userAvatarPreview.src = newSrc;
+            localStorage.setItem('userAvatarSrc', newSrc);
+            showSystemError("我的头像更新成功", false);
+        }
+        updateAllAvatars();
+    }
+
+    function updateAllAvatars() {
+        const aiMessages = chatContainer.querySelectorAll('.message-wrapper.ai-message .avatar');
+        aiMessages.forEach(img => img.src = aiAvatarSrc);
+        const userMessages = chatContainer.querySelectorAll('.message-wrapper.user-message .avatar');
+        userMessages.forEach(img => img.src = userAvatarSrc);
+    }
+
+    // ... (时间格式化函数 getShortTime, formatTimestamp 保持不变) ...
+    function getShortTime(date) {
+        const hours = date.getHours();
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const period = hours < 12 ? '上午' : '下午';
+        const displayHours = String(hours % 12 || 12);
+        return `${period} ${displayHours}:${minutes}`;
+    }
     function formatTimestamp(date) {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         const startOfYear = new Date(now.getFullYear(), 0, 1);
-
-        const hours = date.getHours();
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const period = hours < 12 ? '上午' : '下午';
-        const displayHours = String(hours % 12 || 12);
-        const time = `${period} ${displayHours}:${minutes}`;
-
-        if (date >= today) {
-            return time;
-        } else if (date >= yesterday) {
-            return `昨天 ${time}`;
-        } else if (date >= startOfYear) {
-            return `${date.getMonth() + 1}月${date.getDate()}日 ${time}`;
-        } else {
-            return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${time}`;
-        }
+        const time = getShortTime(date);
+        if (date >= today) { return time; }
+        else if (date >= yesterday) { return `昨天 ${time}`; }
+        else if (date >= startOfYear) { return `${date.getMonth() + 1}月${date.getDate()}日 ${time}`; }
+        else { return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${time}`; }
     }
 
-    function appendMessage(content, role, timestampStr) {
-        const timestamp = timestampStr ? new Date(timestampStr) : new Date();
 
+    /**
+     * 【BUG 2 修复】
+     * 渲染并追加一条消息到聊天容器
+     * 修复：恢复了 'system' 角色的 'else' 逻辑，确保系统提示可以显示
+     */
+    function appendMessage(content, role, timestampStr) {
+        const timestamp = new Date(timestampStr || new Date());
+
+        // 规范化角色 (保持不变, 这是正确的)
+        let displayRole = 'ai';
+        if (role === 'user') {
+            displayRole = 'user';
+        } else if (role === 'system') {
+            displayRole = 'system';
+        }
+
+        // 1. 时间分割线 (保持不变)
         if (!lastMessageTimestamp || (timestamp - lastMessageTimestamp > 5 * 60 * 1000)) {
             const timestampDiv = document.createElement('div');
             timestampDiv.className = 'timestamp';
@@ -402,25 +428,45 @@
         }
         lastMessageTimestamp = timestamp;
 
+        // 2. 创建消息主容器 (保持不变)
         const messageWrapper = document.createElement('div');
-        messageWrapper.className = `message-wrapper ${role}-message`;
+        messageWrapper.className = `message-wrapper ${displayRole}-message`;
 
-        const avatarImg = document.createElement('img');
-        avatarImg.className = 'avatar';
-        if (role === 'user') {
-            avatarImg.src = userAvatarSrc;
-        } else if (role === 'ai') {
-            avatarImg.src = aiAvatarSrc;
+        // 3. 创建头像 (保持不变)
+        if (displayRole === 'user' || displayRole === 'ai') {
+             const avatarImg = document.createElement('img');
+             avatarImg.className = 'avatar';
+             avatarImg.src = (displayRole === 'user') ? userAvatarSrc : aiAvatarSrc;
+             avatarImg.onerror = function() {
+                console.error(`消息头像加载失败 (Role: ${displayRole}), src: ${this.src}`);
+             };
+             messageWrapper.appendChild(avatarImg);
         }
 
+        // 4. 创建气泡和时间容器 (保持不变)
+        const messageBox = document.createElement('div');
+        messageBox.className = 'message-box';
+
+        // 5. 创建消息内容气泡 (保持不变)
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
         messageContent.innerText = content;
 
-        if (role === 'user' || role === 'ai') {
-            messageWrapper.appendChild(avatarImg);
+        // 6. 【关键修复】恢复 if/else 逻辑来添加内容
+        if (displayRole === 'user' || displayRole === 'ai') {
+             const messageTime = document.createElement('span');
+             messageTime.className = 'message-time';
+             messageTime.innerText = getShortTime(timestamp);
+
+             messageBox.appendChild(messageContent); // AI/User: 内容
+             messageBox.appendChild(messageTime); // AI/User: 时间
+        } else {
+             // System message 只有内容
+             messageBox.appendChild(messageContent);
         }
-        messageWrapper.appendChild(messageContent);
+
+        // 7. 组装 (保持不变)
+        messageWrapper.appendChild(messageBox);
         chatContainer.appendChild(messageWrapper);
 
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -431,37 +477,25 @@
         systemMessageWrappers.forEach(wrapper => wrapper.remove());
     }
 
-    /**
-     * 处理头像文件选择
-     */
-    function handleAvatarChange(event, previewElement, storageKey) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const dataUrl = e.target.result;
-            previewElement.src = dataUrl;
-            localStorage.setItem(storageKey, dataUrl);
-
-            if (storageKey === 'userAvatarSrc') {
-                userAvatarSrc = dataUrl;
-            } else if (storageKey === 'aiAvatarSrc') {
-                aiAvatarSrc = dataUrl;
-            }
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function showSystemError(message) {
-        appendMessage(message, 'system', new Date());
+    function showSystemError(message, isChatError = true) {
+        if (window.AndroidBridge && window.AndroidBridge.showToast && !isChatError) {
+             window.AndroidBridge.showToast(message);
+        } else {
+            // 这个函数现在可以正常工作了
+            appendMessage(message, 'system', new Date());
+        }
     }
 
     async function loadHistory(isInitialLoad = false) {
+        const serverUrl = serverIpInput.value;
+        const serverToken = serverTokenInput.value;
+
         if (!serverUrl || !serverToken) {
             if (isInitialLoad) {
+                // 现在会显示红色提示
                 showSystemError("欢迎使用 PA4！请先在设置中配置服务器地址和 Token");
             } else {
+                // 现在会显示红色提示
                 showSystemError("请先在设置中配置服务器地址和 Token");
             }
             return;
@@ -480,53 +514,54 @@
 
             const data = await response.json();
             if (response.ok && data.history && Array.isArray(data.history)) {
+                chatContainer.innerHTML = '';
+                lastMessageTimestamp = null;
+
                 if (data.history.length === 0) {
                     showSystemError("没有历史聊天记录");
                 } else {
-                    chatContainer.innerHTML = '';
-                    lastMessageTimestamp = null;
-
                     data.history.forEach(msg => {
                         appendMessage(msg.content, msg.role, msg.timestamp);
                     });
-                    // *** 修改点：已移除 showSystemError("历史记录加载成功"); ***
                 }
             } else {
+                // 现在会显示红色提示
                 showSystemError(data.error || "加载历史记录失败");
             }
         } catch (error) {
+            // 现在会显示红色提示
             showSystemError("请求失败：" + error.message);
         } finally {
             typingIndicator.style.display = 'none';
         }
     }
 
+    // --- 4. 事件监听器 (保持不变) ---
 
-    // --- 4. 事件监听器 ---
+    aiAvatarPreview.addEventListener('click', () => notifyAndroidToUploadFile('ai'));
+    userAvatarPreview.addEventListener('click', () => notifyAndroidToUploadFile('user'));
 
-    // 直接监听头像图片点击，手动触发文件选择框
-    aiAvatarPreview.addEventListener('click', () => {
-        aiAvatarInput.click();
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendBtn.click();
+        }
     });
-    userAvatarPreview.addEventListener('click', () => {
-        userAvatarInput.click();
-    });
 
-    // 发送消息
     sendBtn.addEventListener('click', async () => {
         const text = messageInput.value.trim();
         if (!text) return;
+
+        const serverUrl = serverIpInput.value;
+        const serverToken = serverTokenInput.value;
 
         if (!serverUrl || !serverToken) {
             showSystemError("请先在设置中配置服务器地址和 Token");
             return;
         }
 
-        // 1. 显示用户消息
         appendMessage(text, 'user', new Date());
         messageInput.value = '';
-
-        // 2. 显示 "正在输入"
         typingIndicator.style.display = 'block';
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -543,8 +578,6 @@
             const data = await response.json();
             if (response.ok && data.response) {
                 clearSystemMessages();
-
-                // 3. 显示 AI 回复
                 appendMessage(data.response, 'ai', data.timestamp || new Date());
             } else {
                 showSystemError("错误：" + (data.error || '未知错误'));
@@ -552,12 +585,11 @@
         } catch (error) {
             showSystemError("请求失败：" + error.message);
         } finally {
-            // 4. 隐藏 "正在输入"
             typingIndicator.style.display = 'none';
         }
     });
 
-    // --- 设置弹窗相关 ---
+    // --- 设置弹窗 (保存按钮逻辑已修复) ---
     settingsIcon.addEventListener('click', () => {
         settingsModal.style.display = 'flex';
     });
@@ -567,35 +599,32 @@
     });
 
     saveSettingsBtn.addEventListener('click', () => {
-        serverUrl = serverIpInput.value.trim();
-        serverToken = serverTokenInput.value.trim();
+        const serverUrl = serverIpInput.value.trim();
+        const serverToken = serverTokenInput.value.trim();
         localStorage.setItem('serverUrl', serverUrl);
         localStorage.setItem('serverToken', serverToken);
 
+        notifyAndroidSettingsSaved(); // BUG 1 已修复, 不会再崩溃
+
+        // 这两行现在可以正常执行了
         settingsModal.style.display = 'none';
-        showSystemError("设置已保存");
+        showSystemError("设置已保存", false); // 将显示原生 Toast
     });
 
-    // 手动加载历史记录按钮监听
     loadHistoryManualBtn.addEventListener('click', async () => {
         settingsModal.style.display = 'none';
         await loadHistory(false);
     });
 
-    // 点击模态框外部关闭
     settingsModal.addEventListener('click', (e) => {
         if (e.target === settingsModal) {
             settingsModal.style.display = 'none';
         }
     });
 
-    // 头像上传监听
-    aiAvatarInput.addEventListener('change', (e) => handleAvatarChange(e, aiAvatarPreview, 'aiAvatarSrc'));
-    userAvatarInput.addEventListener('change', (e) => handleAvatarChange(e, userAvatarPreview, 'userAvatarSrc'));
-
-
-    // --- 5. 自动执行 ---
-    loadHistory(true);
+    // --- 5. 自动执行 (保持不变) ---
+    updateAllAvatars();
+    loadHistory(true); // 现在将正确显示欢迎提示或加载错误
 </script>
 </body>
 </html>
