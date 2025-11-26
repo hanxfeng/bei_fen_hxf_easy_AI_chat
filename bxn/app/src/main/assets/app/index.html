@@ -6,7 +6,7 @@
     <title>PA4 聊天</title>
 
     <style>
-        /* --- 全局重置和基础样式 --- */
+        /* --- (CSS 样式保持不变) --- */
         * {
             margin: 0;
             padding: 0;
@@ -22,8 +22,6 @@
             display: flex;
             flex-direction: column;
         }
-
-        /* --- 顶部栏 --- */
         header {
             display: flex;
             justify-content: space-between;
@@ -38,8 +36,6 @@
         }
         header h2 { font-size: 18px; font-weight: 600; }
         #settings-icon { font-size: 24px; cursor: pointer; color: #555; }
-
-        /* --- "正在输入" 提示 --- */
         #typing-indicator {
             display: none;
             padding: 8px 16px;
@@ -50,8 +46,6 @@
             text-align: center;
             border-bottom: 1px solid #e0e0e0;
         }
-
-        /* --- 聊天容器 --- */
         .chat-container {
             flex: 1;
             overflow-y: auto;
@@ -59,16 +53,12 @@
             display: flex;
             flex-direction: column;
         }
-
-        /* 2.1 居中时间戳 */
         .timestamp {
             text-align: center;
             color: #aaa;
             font-size: 12px;
             margin: 12px 0;
         }
-
-        /* 2.2 消息行 */
         .message-wrapper {
             display: flex;
             align-items: flex-start;
@@ -76,7 +66,6 @@
             max-width: 90%;
             position: relative;
         }
-
         .avatar {
             width: 40px;
             height: 40px;
@@ -86,13 +75,11 @@
             cursor: pointer;
             background-color: #eee;
         }
-
         .message-box {
             display: flex;
             flex-direction: column;
             max-width: calc(100% - 52px);
         }
-
         .message-content {
             padding: 10px 14px;
             border-radius: 12px;
@@ -101,16 +88,10 @@
             word-break: break-word;
             margin-bottom: 4px;
         }
-
-        /* 气泡下方时间戳 */
         .message-time {
             color: #888;
             font-size: 10px;
         }
-
-        /* 3. 头像与气泡位置 */
-
-        /* AI 消息 (左侧) */
         .message-wrapper.ai-message {
             align-self: flex-start;
         }
@@ -120,8 +101,6 @@
         .message-wrapper.ai-message .message-box {
             align-items: flex-start;
         }
-
-        /* AI 气泡颜色 (白色 + 阴影) */
         .message-wrapper.ai-message .message-content {
             background-color: #ffffff;
             border: 1px solid #e0e0e0;
@@ -129,12 +108,9 @@
             border-top-left-radius: 0;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
         }
-
         .message-wrapper.ai-message .message-time {
              align-self: flex-start;
         }
-
-        /* 用户消息 (右侧) */
         .message-wrapper.user-message {
             align-self: flex-end;
             flex-direction: row-reverse;
@@ -154,15 +130,13 @@
              align-self: flex-end;
              color: #999;
         }
-
-        /* 系统消息 */
         .message-wrapper.system-message {
             justify-content: center;
             align-self: center;
             max-width: 100%;
         }
         .message-wrapper.system-message .message-content {
-            background-color: #f8d7da; /* 红色提示 */
+            background-color: #f8d7da;
             color: #721c24;
             width: auto;
             max-width: 80%;
@@ -173,8 +147,6 @@
         .message-wrapper.system-message .message-time {
             display: none;
         }
-
-        /* --- 3. 输入区域 (保持不变) --- */
         .input-container {
             display: flex;
             padding: 10px 16px;
@@ -206,8 +178,6 @@
             line-height: 40px;
         }
         .input-container button:hover { background-color: #0056b3; }
-
-        /* --- 5. 设置弹窗 (保持不变) --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -321,35 +291,50 @@
     const aiAvatarPreview = document.getElementById('ai-avatar-preview');
     const userAvatarPreview = document.getElementById('user-avatar-preview');
 
-    // --- 2. 全局变量和配置加载 (保持不变) ---
-    let aiAvatarSrc = localStorage.getItem('aiAvatarSrc') || 'default-ai.png';
-    let userAvatarSrc = localStorage.getItem('userAvatarSrc') || 'default-user.png';
-
-    serverIpInput.value = localStorage.getItem('serverUrl') || '';
-    serverTokenInput.value = localStorage.getItem('serverToken') || '';
-
-    aiAvatarPreview.src = aiAvatarSrc;
-    userAvatarPreview.src = userAvatarSrc;
-
-    aiAvatarPreview.onerror = () => { console.error("AI 预览头像加载失败, src:", aiAvatarPreview.src); };
-    userAvatarPreview.onerror = () => { console.error("User 预览头像加载失败, src:", userAvatarPreview.src); };
-
+    // --- 2. 全局变量 ---
+    // 【修改】移除 localStorage，这些变量将由 Android 注入
+    let aiAvatarSrc = 'default-ai.png';
+    let userAvatarSrc = 'default-user.png';
     let lastMessageTimestamp = null;
 
     // --- 3. 核心功能函数 ---
 
     /**
-     * 【BUG 1 修复】
-     * 通知 Android 端保存设置成功
-     * 修复：直接从 input 元素读取值，而不是使用不存在的全局变量
+     * 【新增】由 Android 在 onPageFinished 时调用，注入持久化设置
+     */
+    window.initializeSettings = function(config) {
+        if (!config) return;
+
+        // 1. 设置从 Android 加载的配置
+        serverIpInput.value = config.serverUrl || '';
+        serverTokenInput.value = config.token || '';
+
+        // 2. 设置头像路径 (如果 Android 存了永久路径，就用它)
+        aiAvatarSrc = config.aiAvatarPath || 'default-ai.png';
+        userAvatarSrc = config.userAvatarPath || 'default-user.png';
+
+        // 3. 更新设置弹窗中的预览
+        aiAvatarPreview.src = aiAvatarSrc;
+        userAvatarPreview.src = userAvatarSrc;
+
+        // 4. 立即执行应用启动逻辑
+        updateAllAvatars(); // 确保所有已加载消息的头像正确
+        loadHistory(true);  // 使用加载的设置来加载历史记录
+    };
+
+
+    /**
+     * 【Android 桥接】通知 Android 端保存设置成功 (保持不变)
      */
     function notifyAndroidSettingsSaved() {
         if (window.AndroidBridge && window.AndroidBridge.onSettingsSaved) {
-            // 直接读取 input 的当前值
             window.AndroidBridge.onSettingsSaved(serverIpInput.value, serverTokenInput.value);
         }
     }
 
+    /**
+     * 【Android 桥接】通知 Android 端打开文件选择器 (保持不变)
+     */
     function notifyAndroidToUploadFile(fileType) {
         if (window.AndroidBridge && window.AndroidBridge.openFileChooser) {
             window.AndroidBridge.openFileChooser(fileType);
@@ -358,22 +343,29 @@
         }
     }
 
+    /**
+     * 【Android 桥接回调】供 Android 端回调设置新的(永久)头像 URL
+     * 【修改】移除 localStorage.setItem
+     */
     window.setAvatarSrc = function(role, newSrc) {
         if (!newSrc) return;
         if (role === 'ai') {
             aiAvatarSrc = newSrc;
             aiAvatarPreview.src = newSrc;
-            localStorage.setItem('aiAvatarSrc', newSrc);
+            // 移除 localStorage.setItem
             showSystemError("AI 头像更新成功", false);
         } else if (role === 'user') {
             userAvatarSrc = newSrc;
             userAvatarPreview.src = newSrc;
-            localStorage.setItem('userAvatarSrc', newSrc);
+            // 移除 localStorage.setItem
             showSystemError("我的头像更新成功", false);
         }
-        updateAllAvatars();
+        updateAllAvatars(); // 立即刷新聊天窗口中的所有头像
     }
 
+    /**
+     * 更新聊天窗口中所有已存在的头像 (保持不变)
+     */
     function updateAllAvatars() {
         const aiMessages = chatContainer.querySelectorAll('.message-wrapper.ai-message .avatar');
         aiMessages.forEach(img => img.src = aiAvatarSrc);
@@ -404,22 +396,15 @@
 
 
     /**
-     * 【BUG 2 修复】
-     * 渲染并追加一条消息到聊天容器
-     * 修复：恢复了 'system' 角色的 'else' 逻辑，确保系统提示可以显示
+     * 渲染并追加一条消息到聊天容器 (保持不变, Bug 已修复)
      */
     function appendMessage(content, role, timestampStr) {
         const timestamp = new Date(timestampStr || new Date());
 
-        // 规范化角色 (保持不变, 这是正确的)
         let displayRole = 'ai';
-        if (role === 'user') {
-            displayRole = 'user';
-        } else if (role === 'system') {
-            displayRole = 'system';
-        }
+        if (role === 'user') { displayRole = 'user'; }
+        else if (role === 'system') { displayRole = 'system'; }
 
-        // 1. 时间分割线 (保持不变)
         if (!lastMessageTimestamp || (timestamp - lastMessageTimestamp > 5 * 60 * 1000)) {
             const timestampDiv = document.createElement('div');
             timestampDiv.className = 'timestamp';
@@ -428,11 +413,9 @@
         }
         lastMessageTimestamp = timestamp;
 
-        // 2. 创建消息主容器 (保持不变)
         const messageWrapper = document.createElement('div');
         messageWrapper.className = `message-wrapper ${displayRole}-message`;
 
-        // 3. 创建头像 (保持不变)
         if (displayRole === 'user' || displayRole === 'ai') {
              const avatarImg = document.createElement('img');
              avatarImg.className = 'avatar';
@@ -443,32 +426,25 @@
              messageWrapper.appendChild(avatarImg);
         }
 
-        // 4. 创建气泡和时间容器 (保持不变)
         const messageBox = document.createElement('div');
         messageBox.className = 'message-box';
 
-        // 5. 创建消息内容气泡 (保持不变)
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
         messageContent.innerText = content;
 
-        // 6. 【关键修复】恢复 if/else 逻辑来添加内容
         if (displayRole === 'user' || displayRole === 'ai') {
              const messageTime = document.createElement('span');
              messageTime.className = 'message-time';
              messageTime.innerText = getShortTime(timestamp);
-
-             messageBox.appendChild(messageContent); // AI/User: 内容
-             messageBox.appendChild(messageTime); // AI/User: 时间
+             messageBox.appendChild(messageContent);
+             messageBox.appendChild(messageTime);
         } else {
-             // System message 只有内容
              messageBox.appendChild(messageContent);
         }
 
-        // 7. 组装 (保持不变)
         messageWrapper.appendChild(messageBox);
         chatContainer.appendChild(messageWrapper);
-
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
@@ -481,21 +457,22 @@
         if (window.AndroidBridge && window.AndroidBridge.showToast && !isChatError) {
              window.AndroidBridge.showToast(message);
         } else {
-            // 这个函数现在可以正常工作了
             appendMessage(message, 'system', new Date());
         }
     }
 
+    /**
+     * 加载历史记录 (保持不变, 它现在依赖注入的设置)
+     */
     async function loadHistory(isInitialLoad = false) {
+        // 全局变量已由 initializeSettings 设置
         const serverUrl = serverIpInput.value;
         const serverToken = serverTokenInput.value;
 
         if (!serverUrl || !serverToken) {
             if (isInitialLoad) {
-                // 现在会显示红色提示
                 showSystemError("欢迎使用 PA4！请先在设置中配置服务器地址和 Token");
             } else {
-                // 现在会显示红色提示
                 showSystemError("请先在设置中配置服务器地址和 Token");
             }
             return;
@@ -525,18 +502,16 @@
                     });
                 }
             } else {
-                // 现在会显示红色提示
                 showSystemError(data.error || "加载历史记录失败");
             }
         } catch (error) {
-            // 现在会显示红色提示
             showSystemError("请求失败：" + error.message);
         } finally {
             typingIndicator.style.display = 'none';
         }
     }
 
-    // --- 4. 事件监听器 (保持不变) ---
+    // --- 4. 事件监听器 ---
 
     aiAvatarPreview.addEventListener('click', () => notifyAndroidToUploadFile('ai'));
     userAvatarPreview.addEventListener('click', () => notifyAndroidToUploadFile('user'));
@@ -589,7 +564,7 @@
         }
     });
 
-    // --- 设置弹窗 (保存按钮逻辑已修复) ---
+    // --- 设置弹窗 ---
     settingsIcon.addEventListener('click', () => {
         settingsModal.style.display = 'flex';
     });
@@ -598,17 +573,18 @@
         settingsModal.style.display = 'none';
     });
 
+    /**
+     * 【修改】保存设置按钮
+     * 移除 localStorage，只通知 Android
+     */
     saveSettingsBtn.addEventListener('click', () => {
-        const serverUrl = serverIpInput.value.trim();
-        const serverToken = serverTokenInput.value.trim();
-        localStorage.setItem('serverUrl', serverUrl);
-        localStorage.setItem('serverToken', serverToken);
+        // 1. 【移除】localStorage.setItem
 
-        notifyAndroidSettingsSaved(); // BUG 1 已修复, 不会再崩溃
+        // 2. 通知 Android 端保存（这是现在唯一的保存操作）
+        notifyAndroidSettingsSaved();
 
-        // 这两行现在可以正常执行了
         settingsModal.style.display = 'none';
-        showSystemError("设置已保存", false); // 将显示原生 Toast
+        showSystemError("设置已保存", false);
     });
 
     loadHistoryManualBtn.addEventListener('click', async () => {
@@ -622,9 +598,10 @@
         }
     });
 
-    // --- 5. 自动执行 (保持不变) ---
-    updateAllAvatars();
-    loadHistory(true); // 现在将正确显示欢迎提示或加载错误
+    // --- 5. 自动执行 ---
+    // 【修改】移除所有自动执行的代码
+    // 启动逻辑 (updateAllAvatars, loadHistory)
+    // 现在完全由 Android 调用的 `window.initializeSettings` 来触发。
 </script>
 </body>
 </html>
