@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
         const val KEY_SERVER_TOKEN = "serverToken"
         const val KEY_AI_AVATAR = "aiAvatarPath"
         const val KEY_USER_AVATAR = "userAvatarPath"
+        const val KEY_ROLE_NAME = "roleName" // <<< 【新增】
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -42,26 +43,25 @@ class MainActivity : AppCompatActivity() {
         webSettings.javaScriptEnabled = true
         webSettings.allowFileAccess = true
         webSettings.allowUniversalAccessFromFileURLs = true
-        webSettings.domStorageEnabled = true // 虽然我们不用它存设置，但 JS 其他地方可能用
+        webSettings.domStorageEnabled = true
 
-        // 2. 添加桥接
+        // 2. 添加桥接 (保持不变)
         webView.addJavascriptInterface(AndroidBridge(this, this), AndroidBridge.BRIDGE_NAME)
 
-        // 3. 【关键修改】设置 WebViewClient 以便在页面加载后注入设置
+        // 3. 设置 WebViewClient (保持不变)
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // 页面加载完成后，从 SharedPreferences 读取设置并注入 JS
                 injectSettingsIntoJs()
             }
         }
 
-        // 4. 加载 HTML
+        // 4. 加载 HTML (保持不变)
         webView.loadUrl("file:///android_asset/app/index.html")
     }
 
     /**
-     * 【新增】从 SharedPreferences 读取设置并调用 JS 的初始化函数
+     * 【修改】从 SharedPreferences 读取设置并调用 JS 的初始化函数
      */
     private fun injectSettingsIntoJs() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity() {
         val serverToken = prefs.getString(KEY_SERVER_TOKEN, "") ?: ""
         val aiAvatarPath = prefs.getString(KEY_AI_AVATAR, "") ?: ""
         val userAvatarPath = prefs.getString(KEY_USER_AVATAR, "") ?: ""
+        val roleName = prefs.getString(KEY_ROLE_NAME, "玫兰莎") ?: "玫兰莎" // <<< 【新增】并设置默认值
 
         // 构建一个 JSON 对象字符串
         val configJson = """
@@ -76,38 +77,33 @@ class MainActivity : AppCompatActivity() {
                 "serverUrl": "$serverUrl",
                 "token": "$serverToken",
                 "aiAvatarPath": "$aiAvatarPath",
-                "userAvatarPath": "$userAvatarPath"
+                "userAvatarPath": "$userAvatarPath",
+                "roleName": "$roleName" 
             }
-        """.trimIndent()
+        """.trimIndent() // <<< 【新增】 "roleName" 字段
 
         // 调用 JS 中的全局函数 window.initializeSettings
-        // 使用 runOnUiThread 确保在 UI 线程执行
         runOnUiThread {
             webView.loadUrl("javascript:window.initializeSettings($configJson);")
         }
     }
 
     /**
-     * 【新增】将选择的头像(Uri)复制到应用内部存储，并返回永久路径
+     * 【新增】将选择的头像(Uri)复制到应用内部存储，并返回永久路径 (保持不变)
      */
     private fun saveAvatarToFile(uri: Uri, fileType: String): String? {
         try {
             val fileName = if (fileType == "ai") "ai_avatar.png" else "user_avatar.png"
             val destinationFile = File(filesDir, fileName)
 
-            // 使用 ContentResolver 来读取 Uri 的输入流
             val inputStream = contentResolver.openInputStream(uri) ?: return null
-            // 创建到应用内部文件的输出流
             val outputStream = FileOutputStream(destinationFile)
 
-            // 复制文件
             inputStream.use { input ->
                 outputStream.use { output ->
                     input.copyTo(output)
                 }
             }
-
-            // 返回这个文件的永久 URI 路径 (e.g., file:///data/data/com.example.bxn/files/ai_avatar.png)
             return destinationFile.toURI().toString()
 
         } catch (e: Exception) {
@@ -119,7 +115,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ======================== 文件选择逻辑 (修改) ========================
+    // ======================== 文件选择逻辑 (保持不变) ========================
 
     fun startFileSelection(fileType: String) {
         currentFileType = fileType
@@ -139,11 +135,8 @@ class MainActivity : AppCompatActivity() {
             val fileType = currentFileType ?: return
 
             uri?.let {
-                // 【关键修改】复制文件到内部存储
                 val permanentPath = saveAvatarToFile(it, fileType)
-
                 if (permanentPath != null) {
-                    // 1. 将永久路径保存到 SharedPreferences
                     val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     prefs.edit {
                         if (fileType == "ai") {
@@ -152,8 +145,6 @@ class MainActivity : AppCompatActivity() {
                             putString(KEY_USER_AVATAR, permanentPath)
                         }
                     }
-
-                    // 2. 将永久路径回传给 JS
                     val jsCommand = "javascript:window.setAvatarSrc('$fileType', '$permanentPath');"
                     webView.loadUrl(jsCommand)
                 }
@@ -172,16 +163,16 @@ class AndroidBridge(private val context: Context, private val activity: MainActi
 
     /**
      * JS 调用: 保存设置后通知原生端
-     * 【修改】: 现在保存到 SharedPreferences
+     * 【修改】: 增加 roleName 参数，并保存到 SharedPreferences
      */
     @JavascriptInterface
-    fun onSettingsSaved(serverUrl: String, serverToken: String) {
+    fun onSettingsSaved(serverUrl: String, serverToken: String, roleName: String) { // <<< 【新增】 roleName 参数
         val prefs = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
 
-        // 使用 KTX 扩展函数简化编辑
         prefs.edit {
             putString(MainActivity.KEY_SERVER_URL, serverUrl)
             putString(MainActivity.KEY_SERVER_TOKEN, serverToken)
+            putString(MainActivity.KEY_ROLE_NAME, roleName) // <<< 【新增】 保存 roleName
         }
 
         activity.runOnUiThread {

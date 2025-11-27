@@ -240,7 +240,7 @@
 <body>
 
 <header>
-    <h2>PA4 聊天</h2>
+    <h2 id="header-title">玫兰莎</h2>
     <span id="settings-icon">⚙️</span>
 </header>
 <div id="typing-indicator">对方正在输入中...</div>
@@ -253,8 +253,12 @@
 <div id="settings-modal" class="modal-overlay">
     <div class="settings-box">
         <h3>设置</h3>
+
+        <input type="text" id="role-name" placeholder="AI 角色名称 (如 玫兰莎)">
+
         <input type="text" id="server-ip" placeholder="服务器地址 (如 http://10.0.2.2:8080)">
         <input type="text" id="server-token" placeholder="授权 Token">
+
         <div class="avatar-setting">
             <label>
                 AI 头像:
@@ -276,15 +280,20 @@
 </div>
 
 <script>
-    // --- 1. DOM 元素获取 (保持不变) ---
+    // --- 1. DOM 元素获取 ---
     const chatContainer = document.getElementById('chat-container');
     const messageInput = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
     const typingIndicator = document.getElementById('typing-indicator');
+
+    const headerTitle = document.getElementById('header-title'); // <<< 【新增】
     const settingsIcon = document.getElementById('settings-icon');
     const settingsModal = document.getElementById('settings-modal');
+
+    const roleNameInput = document.getElementById('role-name'); // <<< 【新增】
     const serverIpInput = document.getElementById('server-ip');
     const serverTokenInput = document.getElementById('server-token');
+
     const saveSettingsBtn = document.getElementById('save-settings');
     const closeSettingsBtn = document.getElementById('close-settings');
     const loadHistoryManualBtn = document.getElementById('load-history-manual');
@@ -292,7 +301,6 @@
     const userAvatarPreview = document.getElementById('user-avatar-preview');
 
     // --- 2. 全局变量 ---
-    // 【修改】移除 localStorage，这些变量将由 Android 注入
     let aiAvatarSrc = 'default-ai.png';
     let userAvatarSrc = 'default-user.png';
     let lastMessageTimestamp = null;
@@ -300,12 +308,17 @@
     // --- 3. 核心功能函数 ---
 
     /**
-     * 【新增】由 Android 在 onPageFinished 时调用，注入持久化设置
+     * 【修改】由 Android 在 onPageFinished 时调用，注入持久化设置
      */
     window.initializeSettings = function(config) {
         if (!config) return;
 
         // 1. 设置从 Android 加载的配置
+        const roleName = config.roleName || 'PA4 聊天'; // <<< 【新增】
+
+        headerTitle.innerText = roleName; // <<< 【新增】
+        roleNameInput.value = roleName; // <<< 【新增】
+
         serverIpInput.value = config.serverUrl || '';
         serverTokenInput.value = config.token || '';
 
@@ -318,17 +331,22 @@
         userAvatarPreview.src = userAvatarSrc;
 
         // 4. 立即执行应用启动逻辑
-        updateAllAvatars(); // 确保所有已加载消息的头像正确
-        loadHistory(true);  // 使用加载的设置来加载历史记录
+        updateAllAvatars();
+        loadHistory(true);
     };
 
 
     /**
-     * 【Android 桥接】通知 Android 端保存设置成功 (保持不变)
+     * 【修改】通知 Android 端保存设置成功
+     * 现在传递三个参数
      */
     function notifyAndroidSettingsSaved() {
         if (window.AndroidBridge && window.AndroidBridge.onSettingsSaved) {
-            window.AndroidBridge.onSettingsSaved(serverIpInput.value, serverTokenInput.value);
+            window.AndroidBridge.onSettingsSaved(
+                serverIpInput.value,
+                serverTokenInput.value,
+                roleNameInput.value // <<< 【新增】
+            );
         }
     }
 
@@ -344,23 +362,20 @@
     }
 
     /**
-     * 【Android 桥接回调】供 Android 端回调设置新的(永久)头像 URL
-     * 【修改】移除 localStorage.setItem
+     * 【Android 桥接回调】供 Android 端回调设置新的(永久)头像 URL (保持不变)
      */
     window.setAvatarSrc = function(role, newSrc) {
         if (!newSrc) return;
         if (role === 'ai') {
             aiAvatarSrc = newSrc;
             aiAvatarPreview.src = newSrc;
-            // 移除 localStorage.setItem
             showSystemError("AI 头像更新成功", false);
         } else if (role === 'user') {
             userAvatarSrc = newSrc;
             userAvatarPreview.src = newSrc;
-            // 移除 localStorage.setItem
             showSystemError("我的头像更新成功", false);
         }
-        updateAllAvatars(); // 立即刷新聊天窗口中的所有头像
+        updateAllAvatars();
     }
 
     /**
@@ -396,7 +411,7 @@
 
 
     /**
-     * 渲染并追加一条消息到聊天容器 (保持不变, Bug 已修复)
+     * 渲染并追加一条消息到聊天容器 (保持不变)
      */
     function appendMessage(content, role, timestampStr) {
         const timestamp = new Date(timestampStr || new Date());
@@ -462,18 +477,23 @@
     }
 
     /**
-     * 加载历史记录 (保持不变, 它现在依赖注入的设置)
+     * 加载历史记录 (保持不变)
      */
     async function loadHistory(isInitialLoad = false) {
-        // 全局变量已由 initializeSettings 设置
         const serverUrl = serverIpInput.value;
         const serverToken = serverTokenInput.value;
 
         if (!serverUrl || !serverToken) {
             if (isInitialLoad) {
-                showSystemError("欢迎使用 PA4！请先在设置中配置服务器地址和 Token");
+                // 【修改】同时检查角色名称
+                const roleName = roleNameInput.value;
+                if (!roleName) {
+                    showSystemError("欢迎使用！请先在设置中配置角色名称、服务器地址和 Token");
+                } else {
+                    showSystemError("请在设置中配置服务器地址和 Token");
+                }
             } else {
-                showSystemError("请先在设置中配置服务器地址和 Token");
+                showSystemError("请在设置中配置服务器地址和 Token");
             }
             return;
         }
@@ -511,7 +531,7 @@
         }
     }
 
-    // --- 4. 事件监听器 ---
+    // --- 4. 事件监听器 (保持不变) ---
 
     aiAvatarPreview.addEventListener('click', () => notifyAndroidToUploadFile('ai'));
     userAvatarPreview.addEventListener('click', () => notifyAndroidToUploadFile('user'));
@@ -564,7 +584,7 @@
         }
     });
 
-    // --- 设置弹窗 ---
+    // --- 设置弹窗 (保持不变) ---
     settingsIcon.addEventListener('click', () => {
         settingsModal.style.display = 'flex';
     });
@@ -574,14 +594,15 @@
     });
 
     /**
-     * 【修改】保存设置按钮
-     * 移除 localStorage，只通知 Android
+     * 保存设置按钮 (保持不变)
+     * 它调用的 notifyAndroidSettingsSaved() 已经被修改
      */
     saveSettingsBtn.addEventListener('click', () => {
-        // 1. 【移除】localStorage.setItem
-
-        // 2. 通知 Android 端保存（这是现在唯一的保存操作）
+        // 1. 通知 Android 端保存（现在会发送 3 个值）
         notifyAndroidSettingsSaved();
+
+        // 2. 【新增】保存后立即更新 header 标题
+        headerTitle.innerText = roleNameInput.value || 'PA4 聊天';
 
         settingsModal.style.display = 'none';
         showSystemError("设置已保存", false);
@@ -598,10 +619,8 @@
         }
     });
 
-    // --- 5. 自动执行 ---
-    // 【修改】移除所有自动执行的代码
-    // 启动逻辑 (updateAllAvatars, loadHistory)
-    // 现在完全由 Android 调用的 `window.initializeSettings` 来触发。
+    // --- 5. 自动执行 (保持不变) ---
+    // (由 Android 的 window.initializeSettings 触发)
 </script>
 </body>
 </html>

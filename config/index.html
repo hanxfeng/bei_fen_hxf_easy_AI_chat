@@ -50,42 +50,36 @@
             align-items: center;
             flex-shrink: 0;
         }
-
-        /* [!!] 新增：标题容器，用于容纳 标题 和 指示器 */
         .title-container {
             display: flex;
-            align-items: baseline; /* 文本基线对齐 */
+            align-items: baseline;
             gap: 8px;
             flex-grow: 1;
-            overflow: hidden; /* 防止指示器过长时溢出 */
+            overflow: hidden;
         }
-
         .chat-header h1 {
             font-size: 1.25rem;
             font-weight: 700;
-            flex-shrink: 0; /* 防止标题被挤压 */
+            flex-shrink: 0;
         }
-
-        /* [!!] 新增：头部 "正在输入" 指示器样式 */
         .header-typing-indicator {
             font-size: 0.9rem;
             color: var(--text-secondary);
             font-style: italic;
-            font-weight: 400; /* 比标题轻 */
-            white-space: nowrap; /* 不换行 */
-            display: none; /* 默认隐藏 */
+            font-weight: 400;
+            white-space: nowrap;
+            display: none;
         }
-
         .gear-icon {
             font-size: 24px;
             color: var(--text-secondary);
             cursor: pointer;
             transition: color 0.2s, transform 0.3s ease;
-            flex-shrink: 0; /* 防止图标被挤压 */
+            flex-shrink: 0;
         }
         .gear-icon:hover { color: var(--brand-color); transform: rotate(45deg); }
 
-        /* --- 4. 聊天消息区 --- */
+        /* --- 4. 聊天消息区 (无变化) --- */
         .chat-messages {
             flex-grow: 1; overflow-y: auto; padding: 24px;
             display: flex; flex-direction: column;
@@ -129,10 +123,6 @@
             font-size: 0.75rem; color: var(--text-secondary);
             opacity: 0.8; padding: 0 8px;
         }
-
-        /* [!!] 移除：原先在聊天窗口中的 .typing-indicator 样式 */
-        /* .typing-indicator { ... } */
-        /* .typing-indicator-text { ... } */
 
         /* --- 5. 输入区域 (无变化) --- */
         .input-area {
@@ -225,7 +215,7 @@
     <div class="chat-container">
         <header class="chat-header">
             <div class="title-container">
-                <h1>AI 助手</h1>
+                <h1 id="chat-title">AI 助手</h1>
                 <span class="header-typing-indicator" id="header-typing-indicator"></span>
             </div>
             <div class="gear-icon" onclick="toggleSettings()">⚙️</div>
@@ -242,8 +232,7 @@
         <div class="settings-panel">
             <h2>设置</h2>
             <div class="name-inputs">
-                <input type="text" id="userName" placeholder="你的名称" />
-                <input type="text" id="aiName" placeholder="AI 名称" />
+                <input type="text" id="aiName" placeholder="设置 AI 名称" />
             </div>
             <hr style="border: none; border-top: 1px solid var(--border-color);">
             <div class="avatar-settings">
@@ -272,6 +261,7 @@
         let isGenerating = false;
         let controller = null;
 
+        // (formatDisplayTime 函数无变化)
         function formatDisplayTime(timeString) {
             if (!timeString) return "";
             try {
@@ -313,18 +303,30 @@
             }
         }
 
+        // [!!] 修改：window.onload
         window.onload = function() {
-            const savedUserName = localStorage.getItem('userName') || "用户";
-            const savedAiName = localStorage.getItem('aiName') || "AI";
-            document.getElementById("userName").value = savedUserName;
+            // [!!] 移除 userName 加载逻辑
+            // const savedUserName = localStorage.getItem('userName') || "用户";
+
+            // [!!] 修改 aiName 默认值
+            const savedAiName = localStorage.getItem('aiName') || "AI 助手";
+
+            // document.getElementById("userName").value = savedUserName; // [!!] 移除
             document.getElementById("aiName").value = savedAiName;
+
+            // [!!] 新增：页面加载时更新标题
+            document.getElementById("chat-title").innerText = savedAiName;
+
+            // 头像加载逻辑不变
             const savedUserAvatar = localStorage.getItem('userAvatar') || DEFAULT_USER_AVATAR;
             const savedAiAvatar = localStorage.getItem('aiAvatar') || DEFAULT_AI_AVATAR;
             document.getElementById("userAvatarPreview").src = savedUserAvatar;
             document.getElementById("aiAvatarPreview").src = savedAiAvatar;
+
             loadChatHistory();
         };
 
+        // (previewImage 和 toggleSettings 函数无变化)
         function previewImage(event, previewId) {
             const input = event.target;
             if (input.files && input.files[0]) {
@@ -339,14 +341,29 @@
             const settingsPanel = document.getElementById('settings');
             settingsPanel.style.display = (settingsPanel.style.display === 'flex') ? 'none' : 'flex';
         }
+
+        // [!!] 修改：saveSettings
         function saveSettings() {
-            const userName = document.getElementById("userName").value.trim();
+            // const userName = document.getElementById("userName").value.trim(); // [!!] 移除
             const aiName = document.getElementById("aiName").value.trim();
+
+            // 用户头像保存逻辑不变
             const userAvatarSrc = document.getElementById("userAvatarPreview").src;
             const aiAvatarSrc = document.getElementById("aiAvatarPreview").src;
 
-            if (userName) localStorage.setItem('userName', userName);
-            if (aiName) localStorage.setItem('aiName', aiName);
+            // if (userName) localStorage.setItem('userName', userName); // [!!] 移除
+
+            // [!!] 修改 AI 名称保存逻辑
+            if (aiName) {
+                localStorage.setItem('aiName', aiName);
+                document.getElementById("chat-title").innerText = aiName; // 立即更新标题
+            } else {
+                // 如果用户清空了名称，则恢复默认
+                localStorage.removeItem('aiName'); // 移除存储
+                document.getElementById("chat-title").innerText = "AI 助手"; // 恢复默认标题
+            }
+
+            // 头像保存逻辑不变
             if (userAvatarSrc.startsWith('data:image') || userAvatarSrc.includes(DEFAULT_USER_AVATAR)) {
                 localStorage.setItem('userAvatar', userAvatarSrc);
             }
@@ -356,6 +373,7 @@
             toggleSettings();
         }
 
+        // (loadChatHistory 函数无变化)
         function loadChatHistory() {
             const userAvatarSrc = localStorage.getItem('userAvatar') || DEFAULT_USER_AVATAR;
             const aiAvatarSrc = localStorage.getItem('aiAvatar') || DEFAULT_AI_AVATAR;
@@ -405,6 +423,7 @@
                 .catch(error => console.error("加载聊天记录失败:", error));
         }
 
+        // (keydown listener 无变化)
         document.getElementById("prompt").addEventListener("keydown", function (event) {
             if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
@@ -412,7 +431,7 @@
             }
         });
 
-        // [!!] 重大修改：generateResponse 函数
+        // [!!] 修改：generateResponse
         async function generateResponse() {
             const promptInput = document.getElementById("prompt");
             const responseDiv = document.getElementById("response");
@@ -431,7 +450,9 @@
 
             const userAvatarSrc = localStorage.getItem('userAvatar') || DEFAULT_USER_AVATAR;
             const aiAvatarSrc = localStorage.getItem('aiAvatar') || DEFAULT_AI_AVATAR;
-            const aiName = localStorage.getItem('aiName') || "AI";
+
+            // [!!] 修改 aiName 默认值
+            const aiName = localStorage.getItem('aiName') || "AI 助手";
 
             isGenerating = true;
             promptInput.disabled = true;
@@ -440,7 +461,8 @@
 
             // [!!] 1. 显示头部 "正在输入"
             const headerIndicator = document.getElementById('header-typing-indicator');
-            headerIndicator.innerText = `(对方正在输入中)`;
+            // [!!] 修改：使用 aiName 变量
+            headerIndicator.innerText = `(${aiName} 正在输入...)`;
             headerIndicator.style.display = 'inline';
 
             // --- 2. 创建用户消息 (无变化) ---
@@ -469,16 +491,13 @@
             conversationHistory.push({ role: 'user', content: prompt, time: userTime.toISOString() });
             responseDiv.scrollTop = responseDiv.scrollHeight;
 
-            // --- [!!] 3. 移除 "对方正在输入中..." (in-chat) 的创建逻辑 ---
-            // (原先在这里的代码已被删除)
-
-            // --- 4. 准备流式接收 ---
+            // --- 4. 准备流式接收 (无变化) ---
             controller = new AbortController();
             let aiFinalContent = "";
             let aiMessageWrapper = null;
             let aiBubble = null;
             let aiTimeDiv = null;
-            let isFirstChunk = true; // 标记是否为第一个数据块
+            let isFirstChunk = true;
 
             try {
                 const response = await fetch('/generate', {
@@ -503,13 +522,9 @@
                                     const content = data.split('"')[3];
                                     aiFinalContent = content;
 
-                                    // [!!] --- 关键逻辑：第一个数据块 ---
                                     if (isFirstChunk) {
                                         isFirstChunk = false;
 
-                                        // [!!] 1. 移除 (in-chat) 指示器的代码已被删除
-
-                                        // 2. 创建真正的 AI 气泡
                                         aiMessageWrapper = document.createElement('div');
                                         aiMessageWrapper.className = 'message-wrapper ai';
                                         const aiAvatar = document.createElement('img');
@@ -556,18 +571,15 @@
                 sendButton.innerText = "生成";
                 sendButton.disabled = false;
 
-                // [!!] 1. 隐藏头部 "正在输入"
+                // [!!] 1. 隐藏头部 "正在输入" (无变化)
                 const headerIndicator = document.getElementById('header-typing-indicator');
                 headerIndicator.style.display = 'none';
                 headerIndicator.innerText = '';
 
-                // [!!] 2. 移除 (in-chat) 指示器的代码已被删除
-
                 const aiTime = new Date();
 
-                // [!!] 3. 检查状态以更新或创建气泡 (逻辑不变)
+                // [!!] 3. 检查状态以更新或创建气泡 (无变化)
                 if (isFirstChunk && aiFinalContent) {
-                    // --- 情况 A: 一条数据都没收到, 但有错误/停止信息 ---
                     aiMessageWrapper = document.createElement('div');
                     aiMessageWrapper.className = 'message-wrapper ai';
                     const aiAvatar = document.createElement('img');
@@ -581,7 +593,7 @@
                     aiBubble.innerHTML = `<div class="message-content">${aiFinalContent}</div>`;
                     aiTimeDiv = document.createElement('div');
                     aiTimeDiv.className = 'message-time';
-                    aiTimeDiv.innerText = formatDisplayTime(aiTime); // 设置时间
+                    aiTimeDiv.innerText = formatDisplayTime(aiTime);
                     aiBubbleTimeContainer.appendChild(aiBubble);
                     aiBubbleTimeContainer.appendChild(aiTimeDiv);
                     aiMessageWrapper.appendChild(aiAvatar);
@@ -589,7 +601,6 @@
                     responseDiv.appendChild(aiMessageWrapper);
 
                 } else if (!isFirstChunk) {
-                    // --- 情况 B: 至少收到了一条数据, 气泡已存在 ---
                     if (aiBubble && aiFinalContent) {
                          aiBubble.innerHTML = `<div class="message-content">${aiFinalContent}</div>`;
                     }
@@ -598,7 +609,7 @@
                     }
                 }
 
-                // [!!] 4. 保存历史 (逻辑不变)
+                // [!!] 4. 保存历史 (无变化)
                 if (aiFinalContent) {
                     conversationHistory.push({ role: 'assistant', content: aiFinalContent, time: aiTime.toISOString() });
                 }
@@ -607,6 +618,7 @@
             }
         }
 
+        // (stopResponse 函数无变化)
         function stopResponse() {
             if (controller) {
                 controller.abort();

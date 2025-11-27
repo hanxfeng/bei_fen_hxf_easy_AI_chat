@@ -1,6 +1,6 @@
 import eventlet
 eventlet.monkey_patch()
-
+import json
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit, disconnect
 from flask_limiter import Limiter
@@ -71,6 +71,20 @@ def handle_response(data):
         logger.warning(f"收到未知任务 {task_id} 的响应")
 
 
+# 接收历史记录
+@socketio.on("history_response")
+def handle_history_response(data):
+    """接收模型服务器的历史记录结果并通知等待的请求"""
+    task_id = data.get("task_id")
+    if task_id in pending_tasks:
+        # 将接收到的历史记录数据存储到结果中
+        pending_tasks[task_id]["result"] = data.get("history_data")
+        pending_tasks[task_id]["event"].set()  # 触发事件通知
+        logger.info(f"任务 {task_id} (历史记录) 收到模型响应")
+    else:
+        logger.warning(f"收到未知任务 {task_id} (历史记录) 的响应")
+
+
 # HTTP请求安全校验
 @app.before_request
 def verify_token():
@@ -117,10 +131,47 @@ def infer():
         return jsonify({"error": "Internal server error"}), 500
 
 
+# 请求历史记录接口
+@app.route("/get_chat_history", methods=["GET"])
+@limiter.limit("5/minute")  # 限制每分钟最多5次请求
+def get_chat_history():
+    """接收客户端请求历史记录，转发给模型服务器并返回结果"""
+    try:
+        # 生成唯一任务ID并创建事件
+        task_id = str(uuid.uuid4())
+        event = threading.Event()
+        # 使用 task_id 存储一个专用于历史记录请求的占位符
+        pending_tasks[task_id] = {"event": event, "result": None}
+
+        # 转发请求到模型服务器
+        # 使用新的事件名 "history_request"
+        socketio.emit("history_request", {"task_id": task_id})
+        logger.info(f"任务 {task_id} (历史记录) 已发送至模型服务器，等待响应...")
+
+        # 等待响应
+        if event.wait(timeout=300):
+            result = pending_tasks[task_id]["result"]
+            del pending_tasks[task_id]  # 清理任务缓存
+
+            return jsonify({"history": result})
+
+        else:
+            del pending_tasks[task_id]
+            logger.error(f"任务 {task_id} (历史记录) 超时无响应")
+            return jsonify({"error": "模型服务器无响应"}), 504
+
+    except Exception as e:
+        logger.exception("处理历史记录请求时发生错误")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+
+
+
 # 启动服务
 if __name__ == "__main__":
     with app.app_context():
         logger.info("转发服务器启动，监听 0.0.0.0:8080")
-        socketio.run(app, host="0.0.0.0", port=8080)
+        socketio.run(app, host="0.0.0.0", port=8000)
 
     # pyinstaller --onefile --clean --hidden-import=engineio.async_drivers.eventlet --hidden-import=engineio.async_drivers.gevent --hidden-import=engineio.async_drivers.threading --additional-hooks-dir=./hooks --add-data "server_config;server_config" --icon=1icon.ico server.py

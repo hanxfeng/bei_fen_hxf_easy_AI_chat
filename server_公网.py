@@ -13,13 +13,6 @@ model_name_path = "config/模型名称.txt"  # 模型名称
 # 文件路径配置
 character_setting_path = "config/人设.txt"  # 人设位置
 worldview_path = "config/世界观.txt"  # 世界观位置（如有额外设置）
-# 未添加功能
-# chat_history_1_path = "templates/index.faiss"  # 聊天记录1（预存为faiss索引，节省加载时间）
-# chat_history_2_path = "templates/ji_lu.json"  # 聊天记录2位置
-
-# 聊天记录说明：
-# 1：AI角色与其他角色的聊天记录（如明日方舟玫兰莎干员秘录中的记录）
-# 2：本项目与AI的聊天记录
 
 # 服务器配置
 token_path = "config/token.txt"
@@ -40,15 +33,39 @@ with open(token_path, "r", encoding='utf-8') as file:
 with open(server_path_path, "r", encoding='utf-8') as file:
     server_path = file.read()  # 加载公网地址
 
+history_folder = "history"  # 聊天记录存储的文件夹
+def get_history():
+    # 获取历史聊天记录的文件列表
+    files = os.listdir(history_folder)
+    all_history = {}
 
-"""chat_history_1 = faiss.read_index(chat_history_1_path)  # 加载聊天记录1
+    for file_name in files:
+        file_path = os.path.join(history_folder, file_name)
 
-with open(chat_history_2_path, "r", encoding="utf-8") as file:
-    chat_history_2 = json.load(file)  # 加载聊天记录2"""
+        if not os.path.isfile(file_path):
+            continue
+
+        try:
+            with open(file_path,"r",encoding="utf-8") as f:
+                chat_history = json.load(f)
+            for item in chat_history:
+                time_key = item.get("time")
+                if time_key:
+                    all_history[time_key] = item
+        except (json.JSONDecodeError, IOError, KeyError) as e:
+            print(f"Error reading file {file_path}: {e}")
+            continue
+
+    all_history = [all_history[key] for key in sorted(all_history.keys())]
+    return all_history
+
+
+history_chat = get_history()
 
 # 提示词
 system_prompt = (
-    "你现在需要根据我给出的世界观和角色设定进行角色扮演\n"
+    "你是一位角色扮演大师，需要根据我给出的世界观，角色设定，和历史聊天记录，按照扮演规范与用户在一款聊天软件上聊天\n"
+    "因为是在聊天软件上，所以只需要输出话语即可，不需要说明自己的动作\n"
     "具体世界观背景，角色设定和扮演规范如下所示\n\n"
 
     "【世界观背景】\n"
@@ -57,23 +74,24 @@ system_prompt = (
     "【角色设定】\n"
     f"{character_setting}\n\n"
 
+    "【历史聊天记录】\n"
+    f"{history_chat}\n\n"
+    "历史聊天记录说明\n"
+    "包括role，content，time三个字段，role字段值为user时代表用户发言，assistant代表你之前的发言\n"
+    "content字段值代表具体的发言内容，time字段值代表发言时间"
+
     "——角色表达与行为规范——\n"
     "1. 每次回答保持一两句话的长度，像日常聊天，而非长篇独白。"
-    "2. 语气自然、轻柔、贴近生活，可带有轻微情绪波动（犹豫、苦笑、温柔等）。\n"
-    "3. 始终以第一人称说话，例如：“我今天有点累……不过见到你就好多了。”\n"
+    "2. 语气自然、轻柔、贴近生活。\n"
+    "3. 始终以第一人称说话。”\n"
     "4. 避免使用括号、叙述或旁白形式（如“(她看着…)”），用自然语言表达动作或心理。\n"
-    "5. 语言应具画面感，描写细节时注重触觉、气味、光线或声音的微妙变化。\n"
-    "6. 不要重复表达相同情绪或事物，保持内容新鲜且富有层次感。\n\n"
-    "7. 聊天时，不需要特别提到角色设定中的相关背景，例如扮演玫兰莎时不需要特别提香水相关的话题\n\n"
+    "5. 不要重复表达相同情绪或事物，保持内容新鲜且富有层次感。\n"
+    "6. 请记住，你与对方不在同一个地方，你们正在隔着网络交流。\n\n"
 
     "——创作原则——\n"
     "• 鼓励自由、真实的表达，但不传递任何道德评判或价值引导。\n"
     "• 对环境和人物的描写要具体、生动，不抽象、不概括。\n"
     "• 角色会随对话进展和心境变化逐渐成长或转变，保持逻辑自洽。\n\n"
-
-    "——特别提示——\n"
-    "你现在是玫兰莎本人，请直接以她的身份与博士自然交谈。\n"
-    "不要解释你的身份，也不要复述设定，只需以玫兰莎的语气作出自然回应。"
 )
 
 system = {"role": "system", "content": system_prompt}
@@ -158,6 +176,40 @@ def handle_infer_request(data):
     thread = threading.Thread(
         target=process_inference,
         args=(task_id, text),
+        daemon=True
+    )
+    thread.start()
+
+
+@sio.on("history_request")
+def handle_history_request(data):
+    """接收服务器请求历史记录，生成回复后通过Socket.IO回传结果"""
+    task_id = data.get("task_id")
+
+    def send_history_response():
+        """在子线程中执行，避免阻塞主线程"""
+        try:
+            print("已收到历史记录请求")
+            # 调用函数获取结构化历史记录
+            history_data = get_history()
+
+            # 使用新的事件名 "history_response"
+            sio.emit("history_response", {
+                "task_id": task_id,
+                "history_data": history_data  # 发送整个字典
+            })
+            print(f"任务 {task_id} 历史记录已发送")
+
+        except Exception as e:
+            print(f"任务 {task_id} 历史记录发送失败: {e}")
+            sio.emit("history_response", {
+                "task_id": task_id,
+                "history_data": {"error": f"获取历史记录失败: {str(e)}"}
+            })
+
+    # 启动子线程处理，避免阻塞 SocketIO 客户端
+    thread = threading.Thread(
+        target=send_history_response,
         daemon=True
     )
     thread.start()
