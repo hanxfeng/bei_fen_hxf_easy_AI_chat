@@ -13,13 +13,6 @@ model_name_path = "config/模型名称.txt"  # 模型名称
 # 文件路径配置
 character_setting_path = "config/人设.txt"  # 人设位置
 worldview_path = "config/世界观.txt"  # 世界观位置（如有额外设置）
-# 未添加功能
-# chat_history_1_path = "templates/index.faiss"  # 聊天记录1（预存为faiss索引，节省加载时间）
-# chat_history_2_path = "templates/ji_lu.json"  # 聊天记录2位置
-
-# 聊天记录说明：
-# 1：AI角色与其他角色的聊天记录（如明日方舟玫兰莎干员秘录中的记录）
-# 2：本项目与AI的聊天记录
 
 # 服务器配置
 token_path = "config/token.txt"

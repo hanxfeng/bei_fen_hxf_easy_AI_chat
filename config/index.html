@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>现代聊天室</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 
     <style>
         /* --- 1 & 2. 全局, 容器 (无变化) --- */
@@ -224,7 +221,7 @@
         <div class="chat-messages" id="response"></div>
         <footer class="input-area">
             <textarea placeholder="按回车输入，shift+回车换行" id="prompt"></textarea>
-            <button id="send-button" onclick="generateResponse()">生成</button>
+            <button id="send-button" onclick="generateResponse()">发送</button>
         </footer>
     </div>
 
@@ -462,7 +459,7 @@
             // [!!] 1. 显示头部 "正在输入"
             const headerIndicator = document.getElementById('header-typing-indicator');
             // [!!] 修改：使用 aiName 变量
-            headerIndicator.innerText = `(${aiName} 正在输入...)`;
+            headerIndicator.innerText = `(对方正在输入中...)`;
             headerIndicator.style.display = 'inline';
 
             // --- 2. 创建用户消息 (无变化) ---
