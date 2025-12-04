@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+
+<html lang="zh">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+    <title>PA4 聊天</title>
+
+
+
+    <style>
+
+        /* --- (CSS 样式保持不变) --- */
+
+        * {
+
+            margin: 0;
+
+            padding: 0;
+
+            box-sizing: border-box;
+
+        }
+
+        html, body {
+
+            height: 100%;
+
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+            background-color: #f0f2f5;
+
+            overflow: hidden;
+
+        }
+
+        body {
+
+            display: flex;
+
+            flex-direction: column;
+
+        }
+
+        header {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            padding: 12px 16px;
+
+            background-color: #ffffff;
+
+            border-bottom: 1px solid #e0e0e0;
+
+            flex-shrink: 0;
+
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+
+            position: relative;
+
+            z-index: 10;
+
+        }
+
+        header h2 { font-size: 18px; font-weight: 600; }
+
+        #settings-icon { font-size: 24px; cursor: pointer; color: #555; }
+
+        #typing-indicator {
+
+            display: none;
+
+            padding: 8px 16px;
+
+            background-color: #f0f2f5;
+
+            color: #888;
+
+            font-style: italic;
+
+            font-size: 13px;
+
+            text-align: center;
+
+            border-bottom: 1px solid #e0e0e0;
+
+        }
+
+        .chat-container {
+
+            flex: 1;
+
+            overflow-y: auto;
+
+            padding: 16px;
+
+            display: flex;
+
+            flex-direction: column;
+
+        }
+
+        .timestamp {
+
+            text-align: center;
+
+            color: #aaa;
+
+            font-size: 12px;
+
+            margin: 12px 0;
+
+        }
+
+        .message-wrapper {
+
+            display: flex;
+
+            align-items: flex-start;
+
+            margin-bottom: 16px;
+
+            max-width: 90%;
+
+            position: relative;
+
+        }
+
+        .avatar {
+
+            width: 40px;
+
+            height: 40px;
+
+            border-radius: 50%;
+
+            object-fit: cover;
+
+            flex-shrink: 0;
+
+            cursor: pointer;
+
+            background-color: #eee;
+
+        }
+
+        .message-box {
+
+            display: flex;
+
+            flex-direction: column;
+
+            max-width: calc(100% - 52px);
+
+        }
+
+        .message-content {
+
+            padding: 10px 14px;
+
+            border-radius: 12px;
+
+            line-height: 1.5;
+
+            font-size: 15px;
+
+            word-break: break-word;
+
+            margin-bottom: 4px;
+
+        }
+
+        .message-time {
+
+            color: #888;
+
+            font-size: 10px;
+
+        }
+
+        .message-wrapper.ai-message {
+
+            align-self: flex-start;
+
+        }
+
+        .message-wrapper.ai-message .avatar {
+
+            margin-right: 12px;
+
+        }
+
+        .message-wrapper.ai-message .message-box {
+
+            align-items: flex-start;
+
+        }
+
+        .message-wrapper.ai-message .message-content {
+
+            background-color: #ffffff;
+
+            border: 1px solid #e0e0e0;
+
+            color: #333;
+
+            border-top-left-radius: 0;
+
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+        }
+
+        .message-wrapper.ai-message .message-time {
+
+             align-self: flex-start;
+
+        }
+
+        .message-wrapper.user-message {
+
+            align-self: flex-end;
+
+            flex-direction: row-reverse;
+
+        }
+
+        .message-wrapper.user-message .avatar {
+
+            margin-left: 12px;
+
+        }
+
+        .message-wrapper.user-message .message-box {
+
+            align-items: flex-end;
+
+        }
+
+        .message-wrapper.user-message .message-content {
+
+            background-color: #007bff;
+
+            color: #ffffff;
+
+            border-top-right-radius: 0;
+
+        }
+
+        .message-wrapper.user-message .message-time {
+
+             align-self: flex-end;
+
+             color: #999;
+
+        }
+
+        .message-wrapper.system-message {
+
+            justify-content: center;
+
+            align-self: center;
+
+            max-width: 100%;
+
+        }
+
+        .message-wrapper.system-message .message-content {
+
+            background-color: #f8d7da;
+
+            color: #721c24;
+
+            width: auto;
+
+            max-width: 80%;
+
+            text-align: center;
+
+            border-radius: 8px;
+
+        }
+
+        .message-wrapper.system-message .avatar,
+
+        .message-wrapper.system-message .message-time {
+
+            display: none;
+
+        }
+
+        .input-container {
+
+            display: flex;
+
+            padding: 10px 16px;
+
+            background-color: #ffffff;
+
+            border-top: 1px solid #e0e0e0;
+
+            flex-shrink: 0;
+
+        }
+
+        #message-input {
+
+            flex: 1;
+
+            padding: 10px 12px;
+
+            border: 1px solid #ddd;
+
+            border-radius: 20px;
+
+            font-size: 15px;
+
+            margin-right: 8px;
+
+            outline: none;
+
+        }
+
+        #message-input:focus { border-color: #007bff; }
+
+        .input-container button {
+
+            padding: 0 16px;
+
+            border: none;
+
+            border-radius: 20px;
+
+            background-color: #007bff;
+
+            color: white;
+
+            font-size: 15px;
+
+            cursor: pointer;
+
+            margin-left: 5px;
+
+            white-space: nowrap;
+
+            height: 40px;
+
+            line-height: 40px;
+
+        }
+
+        .input-container button:hover { background-color: #0056b3; }
+
+        .modal-overlay {
+
+            display: none;
+
+            position: fixed;
+
+            top: 0;
+
+            left: 0;
+
+            width: 100%;
+
+            height: 100%;
+
+            background-color: rgba(0, 0, 0, 0.5);
+
+            justify-content: center;
+
+            align-items: center;
+
+            z-index: 1000;
+
+        }
+
+        .settings-box {
+
+            background-color: white;
+
+            padding: 24px;
+
+            border-radius: 12px;
+
+            width: 90%;
+
+            max-width: 400px;
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 16px;
+
+        }
+
+        .settings-box h3 { text-align: center; margin-bottom: 10px; }
+
+        .settings-box input[type="text"] {
+
+            width: 100%;
+
+            padding: 12px;
+
+            border: 1px solid #ccc;
+
+            border-radius: 8px;
+
+            font-size: 14px;
+
+        }
+
+        .avatar-setting {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            font-size: 15px;
+
+        }
+
+        .avatar-setting label { display: flex; align-items: center; }
+
+        .avatar-preview {
+
+            width: 40px;
+
+            height: 40px;
+
+            border-radius: 50%;
+
+            margin-left: 10px;
+
+            object-fit: cover;
+
+            border: 1px solid #eee;
+
+            cursor: pointer;
+
+        }
+
+        .avatar-hint { font-size: 12px; color: #888; }
+
+        .settings-box button {
+
+            padding: 12px;
+
+            border: none;
+
+            border-radius: 8px;
+
+            font-size: 16px;
+
+            cursor: pointer;
+
+        }
+
+        #save-settings { background-color: #007bff; color: white; }
+
+        #load-history-manual { background-color: #6c757d; color: white; }
+
+        .close-btn { background-color: #f1f1f1; color: #333; }
+
+    </style>
+
+</head>
+
+<body>
+
+
+
+<header>
+
+    <h2 id="header-title">玫兰莎</h2>
+
+    <span id="settings-icon">⚙️</span>
+
+</header>
+
+<div id="typing-indicator">对方正在输入中...</div>
+
+<div class="chat-container" id="chat-container">
+
+</div>
+
+<div class="input-container">
+
+    <input type="text" id="message-input" placeholder="输入消息...">
+
+    <button id="send-btn">发送</button>
+
+</div>
+
+<div id="settings-modal" class="modal-overlay">
+
+    <div class="settings-box">
+
+        <h3>设置</h3>
+
+
+
+        <input type="text" id="role-name" placeholder="AI 角色名称 (如 玫兰莎)">
+
+
+
+        <input type="text" id="server-ip" placeholder="服务器地址 (如 http://10.0.2.2:8080)">
+
+        <input type="text" id="server-token" placeholder="授权 Token">
+
+
+
+        <div class="avatar-setting">
+
+            <label>
+
+                AI 头像:
+
+                <img src="default-ai.png" id="ai-avatar-preview" class="avatar-preview">
+
+            </label>
+
+            <span class="avatar-hint">点击头像可更换 (原生)</span>
+
+        </div>
+
+        <div class="avatar-setting">
+
+            <label>
+
+                我的头像:
+
+                <img src="default-user.png" id="user-avatar-preview" class="avatar-preview">
+
+            </label>
+
+            <span class="avatar-hint">点击头像可更换 (原生)</span>
+
+        </div>
+
+        <button id="save-settings">保存设置</button>
+
+        <button id="load-history-manual">手动加载记录</button>
+
+        <button id="close-settings" class="close-btn">关闭</button>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+    // --- 1. DOM 元素获取 ---
+
+    const chatContainer = document.getElementById('chat-container');
+
+    const messageInput = document.getElementById('message-input');
+
+    const sendBtn = document.getElementById('send-btn');
+
+    const typingIndicator = document.getElementById('typing-indicator');
+
+
+
+    const headerTitle = document.getElementById('header-title'); // <<< 【新增】
+
+    const settingsIcon = document.getElementById('settings-icon');
+
+    const settingsModal = document.getElementById('settings-modal');
+
+
+
+    const roleNameInput = document.getElementById('role-name'); // <<< 【新增】
+
+    const serverIpInput = document.getElementById('server-ip');
+
+    const serverTokenInput = document.getElementById('server-token');
+
+
+
+    const saveSettingsBtn = document.getElementById('save-settings');
+
+    const closeSettingsBtn = document.getElementById('close-settings');
+
+    const loadHistoryManualBtn = document.getElementById('load-history-manual');
+
+    const aiAvatarPreview = document.getElementById('ai-avatar-preview');
+
+    const userAvatarPreview = document.getElementById('user-avatar-preview');
+
+
+
+    // --- 2. 全局变量 ---
+
+    let aiAvatarSrc = 'default-ai.png';
+
+    let userAvatarSrc = 'default-user.png';
+
+    let lastMessageTimestamp = null;
+
+
+
+    // --- 3. 核心功能函数 ---
+
+
+
+    /**
+
+     * 【修改】由 Android 在 onPageFinished 时调用，注入持久化设置
+
+     */
+
+    window.initializeSettings = function(config) {
+
+        if (!config) return;
+
+
+
+        // 1. 设置从 Android 加载的配置
+
+        const roleName = config.roleName || 'PA4 聊天'; // <<< 【新增】
+
+
+
+        headerTitle.innerText = roleName; // <<< 【新增】
+
+        roleNameInput.value = roleName; // <<< 【新增】
+
+
+
+        serverIpInput.value = config.serverUrl || '';
+
+        serverTokenInput.value = config.token || '';
+
+
+
+        // 2. 设置头像路径 (如果 Android 存了永久路径，就用它)
+
+        aiAvatarSrc = config.aiAvatarPath || 'default-ai.png';
+
+        userAvatarSrc = config.userAvatarPath || 'default-user.png';
+
+
+
+        // 3. 更新设置弹窗中的预览
+
+        aiAvatarPreview.src = aiAvatarSrc;
+
+        userAvatarPreview.src = userAvatarSrc;
+
+
+
+        // 4. 立即执行应用启动逻辑
+
+        updateAllAvatars();
+
+        loadHistory(true);
+
+    };
+
+
+
+
+
+    /**
+
+     * 【修改】通知 Android 端保存设置成功
+
+     * 现在传递三个参数
+
+     */
+
+    function notifyAndroidSettingsSaved() {
+
+        if (window.AndroidBridge && window.AndroidBridge.onSettingsSaved) {
+
+            window.AndroidBridge.onSettingsSaved(
+
+                serverIpInput.value,
+
+                serverTokenInput.value,
+
+                roleNameInput.value // <<< 【新增】
+
+            );
+
+        }
+
+    }
+
+
+
+    /**
+
+     * 【Android 桥接】通知 Android 端打开文件选择器 (保持不变)
+
+     */
+
+    function notifyAndroidToUploadFile(fileType) {
+
+        if (window.AndroidBridge && window.AndroidBridge.openFileChooser) {
+
+            window.AndroidBridge.openFileChooser(fileType);
+
+        } else {
+
+            showSystemError("请在 Android 应用中点击头像进行更换！", false);
+
+        }
+
+    }
+
+
+
+    /**
+
+     * 【Android 桥接回调】供 Android 端回调设置新的(永久)头像 URL (保持不变)
+
+     */
+
+    window.setAvatarSrc = function(role, newSrc) {
+
+        if (!newSrc) return;
+
+        if (role === 'ai') {
+
+            aiAvatarSrc = newSrc;
+
+            aiAvatarPreview.src = newSrc;
+
+            showSystemError("AI 头像更新成功", false);
+
+        } else if (role === 'user') {
+
+            userAvatarSrc = newSrc;
+
+            userAvatarPreview.src = newSrc;
+
+            showSystemError("我的头像更新成功", false);
+
+        }
+
+        updateAllAvatars();
+
+    }
+
+
+
+    /**
+
+     * 更新聊天窗口中所有已存在的头像 (保持不变)
+
+     */
+
+    function updateAllAvatars() {
+
+        const aiMessages = chatContainer.querySelectorAll('.message-wrapper.ai-message .avatar');
+
+        aiMessages.forEach(img => img.src = aiAvatarSrc);
+
+        const userMessages = chatContainer.querySelectorAll('.message-wrapper.user-message .avatar');
+
+        userMessages.forEach(img => img.src = userAvatarSrc);
+
+    }
+
+
+
+    // ... (时间格式化函数 getShortTime, formatTimestamp 保持不变) ...
+
+    function getShortTime(date) {
+
+        const hours = date.getHours();
+
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        const period = hours < 12 ? '上午' : '下午';
+
+        const displayHours = String(hours % 12 || 12);
+
+        return `${period} ${displayHours}:${minutes}`;
+
+    }
+
+    function formatTimestamp(date) {
+
+        const now = new Date();
+
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        const yesterday = new Date(today);
+
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+        const time = getShortTime(date);
+
+        if (date >= today) { return time; }
+
+        else if (date >= yesterday) { return `昨天 ${time}`; }
+
+        else if (date >= startOfYear) { return `${date.getMonth() + 1}月${date.getDate()}日 ${time}`; }
+
+        else { return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${time}`; }
+
+    }
+
+
+
+
+
+    /**
+
+     * 渲染并追加一条消息到聊天容器 (保持不变)
+
+     */
+
+    function appendMessage(content, role, timestampStr) {
+
+        const timestamp = new Date(timestampStr || new Date());
+
+
+
+        let displayRole = 'ai';
+
+        if (role === 'user') { displayRole = 'user'; }
+
+        else if (role === 'system') { displayRole = 'system'; }
+
+
+
+        if (!lastMessageTimestamp || (timestamp - lastMessageTimestamp > 5 * 60 * 1000)) {
+
+            const timestampDiv = document.createElement('div');
+
+            timestampDiv.className = 'timestamp';
+
+            timestampDiv.innerText = formatTimestamp(timestamp);
+
+            chatContainer.appendChild(timestampDiv);
+
+        }
+
+        lastMessageTimestamp = timestamp;
+
+
+
+        const messageWrapper = document.createElement('div');
+
+        messageWrapper.className = `message-wrapper ${displayRole}-message`;
+
+
+
+        if (displayRole === 'user' || displayRole === 'ai') {
+
+             const avatarImg = document.createElement('img');
+
+             avatarImg.className = 'avatar';
+
+             avatarImg.src = (displayRole === 'user') ? userAvatarSrc : aiAvatarSrc;
+
+             avatarImg.onerror = function() {
+
+                console.error(`消息头像加载失败 (Role: ${displayRole}), src: ${this.src}`);
+
+             };
+
+             messageWrapper.appendChild(avatarImg);
+
+        }
+
+
+
+        const messageBox = document.createElement('div');
+
+        messageBox.className = 'message-box';
+
+
+
+        const messageContent = document.createElement('div');
+
+        messageContent.className = 'message-content';
+
+        messageContent.innerText = content;
+
+
+
+        if (displayRole === 'user' || displayRole === 'ai') {
+
+             const messageTime = document.createElement('span');
+
+             messageTime.className = 'message-time';
+
+             messageTime.innerText = getShortTime(timestamp);
+
+             messageBox.appendChild(messageContent);
+
+             messageBox.appendChild(messageTime);
+
+        } else {
+
+             messageBox.appendChild(messageContent);
+
+        }
+
+
+
+        messageWrapper.appendChild(messageBox);
+
+        chatContainer.appendChild(messageWrapper);
+
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    }
+
+
+
+    function clearSystemMessages() {
+
+        const systemMessageWrappers = chatContainer.querySelectorAll('.message-wrapper.system-message');
+
+        systemMessageWrappers.forEach(wrapper => wrapper.remove());
+
+    }
+
+
+
+    function showSystemError(message, isChatError = true) {
+
+        if (window.AndroidBridge && window.AndroidBridge.showToast && !isChatError) {
+
+             window.AndroidBridge.showToast(message);
+
+        } else {
+
+            appendMessage(message, 'system', new Date());
+
+        }
+
+    }
+
+
+
+    /**
+
+     * 加载历史记录 (保持不变)
+
+     */
+
+    async function loadHistory(isInitialLoad = false) {
+
+        const serverUrl = serverIpInput.value;
+
+        const serverToken = serverTokenInput.value;
+
+
+
+        if (!serverUrl || !serverToken) {
+
+            if (isInitialLoad) {
+
+                // 【修改】同时检查角色名称
+
+                const roleName = roleNameInput.value;
+
+                if (!roleName) {
+
+                    showSystemError("欢迎使用！请先在设置中配置角色名称、服务器地址和 Token");
+
+                } else {
+
+                    showSystemError("请在设置中配置服务器地址和 Token");
+
+                }
+
+            } else {
+
+                showSystemError("请在设置中配置服务器地址和 Token");
+
+            }
+
+            return;
+
+        }
+
+
+
+        typingIndicator.style.display = 'block';
+
+
+
+        try {
+
+            const response = await fetch(`${serverUrl}/get_chat_history`, {
+
+                method: 'GET',
+
+                headers: {
+
+                    'Content-Type': 'application/json',
+
+                    'Authorization': `Bearer ${serverToken}`
+
+                }
+
+            });
+
+
+
+            const data = await response.json();
+
+            if (response.ok && data.history && Array.isArray(data.history)) {
+
+                chatContainer.innerHTML = '';
+
+                lastMessageTimestamp = null;
+
+
+
+                if (data.history.length === 0) {
+
+                    showSystemError("没有历史聊天记录");
+
+                } else {
+
+                    data.history.forEach(msg => {
+
+                        appendMessage(msg.content, msg.role, msg.timestamp);
+
+                    });
+
+                }
+
+            } else {
+
+                showSystemError(data.error || "加载历史记录失败");
+
+            }
+
+        } catch (error) {
+
+            showSystemError("请求失败：" + error.message);
+
+        } finally {
+
+            typingIndicator.style.display = 'none';
+
+        }
+
+    }
+
+
+
+    // --- 4. 事件监听器 (保持不变) ---
+
+
+
+    aiAvatarPreview.addEventListener('click', () => notifyAndroidToUploadFile('ai'));
+
+    userAvatarPreview.addEventListener('click', () => notifyAndroidToUploadFile('user'));
+
+
+
+    messageInput.addEventListener('keydown', (e) => {
+
+        if (e.key === 'Enter' && !e.shiftKey) {
+
+            e.preventDefault();
+
+            sendBtn.click();
+
+        }
+
+    });
+
+
+
+    sendBtn.addEventListener('click', async () => {
+
+        const text = messageInput.value.trim();
+
+        if (!text) return;
+
+
+
+        const serverUrl = serverIpInput.value;
+
+        const serverToken = serverTokenInput.value;
+
+
+
+        if (!serverUrl || !serverToken) {
+
+            showSystemError("请先在设置中配置服务器地址和 Token");
+
+            return;
+
+        }
+
+
+
+        appendMessage(text, 'user', new Date());
+
+        messageInput.value = '';
+
+        typingIndicator.style.display = 'block';
+
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+
+
+        try {
+
+            const response = await fetch(`${serverUrl}/chat`, {
+
+                method: 'POST',
+
+                headers: {
+
+                    'Content-Type': 'application/json',
+
+                    'Authorization': `Bearer ${serverToken}`
+
+                },
+
+                body: JSON.stringify({ messages: text })
+
+            });
+
+
+
+            const data = await response.json();
+
+            if (response.ok && data.response) {
+
+                clearSystemMessages();
+
+                appendMessage(data.response, 'ai', data.timestamp || new Date());
+
+            } else {
+
+                showSystemError("错误：" + (data.error || '未知错误'));
+
+            }
+
+        } catch (error) {
+
+            showSystemError("请求失败：" + error.message);
+
+        } finally {
+
+            typingIndicator.style.display = 'none';
+
+        }
+
+    });
+
+
+
+    // --- 设置弹窗 (保持不变) ---
+
+    settingsIcon.addEventListener('click', () => {
+
+        settingsModal.style.display = 'flex';
+
+    });
+
+
+
+    closeSettingsBtn.addEventListener('click', () => {
+
+        settingsModal.style.display = 'none';
+
+    });
+
+
+
+    /**
+
+     * 保存设置按钮 (保持不变)
+
+     * 它调用的 notifyAndroidSettingsSaved() 已经被修改
+
+     */
+
+    saveSettingsBtn.addEventListener('click', () => {
+
+        // 1. 通知 Android 端保存（现在会发送 3 个值）
+
+        notifyAndroidSettingsSaved();
+
+
+
+        // 2. 【新增】保存后立即更新 header 标题
+
+        headerTitle.innerText = roleNameInput.value || 'PA4 聊天';
+
+
+
+        settingsModal.style.display = 'none';
+
+        showSystemError("设置已保存", false);
+
+    });
+
+
+
+    loadHistoryManualBtn.addEventListener('click', async () => {
+
+        settingsModal.style.display = 'none';
+
+        await loadHistory(false);
+
+    });
+
+
+
+    settingsModal.addEventListener('click', (e) => {
+
+        if (e.target === settingsModal) {
+
+            settingsModal.style.display = 'none';
+
+        }
+
+    });
+
+
+
+    // --- 5. 自动执行 (保持不变) ---
+
+    // (由 Android 的 window.initializeSettings 触发)
+
+</script>
+
+</body>
+
+</html>
+
+这是我的html代码，我需要你进行以下修改：
+
+def chat_return(user_request):
+
+    global system_prompt, messages
+
+
+
+    user = {"role": "user", "content": user_request, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+
+
+    messages.append(user)
+
+
+
+    try:
+
+        # 生成回复
+
+        outputs = chat_completions_model(user=user)
+
+
+
+        # 定义流式生成器函数
+
+        def generate_stream():
+
+            """将完整的outputs分割并逐块返回的生成器"""
+
+
+
+            fragments = outputs.split("。")
+
+
+
+            # 最后一个分片可能为空或是不完整的句子，我们需要处理它
+
+            for i, fragment in enumerate(fragments):
+
+                if not fragment:
+
+                    continue
+
+
+
+                # 重新拼接句号，作为完整的一句话
+
+                sentence = fragment + "。" if i < len(fragments) - 1 or outputs.endswith("。") else fragment
+
+                sentence = sentence.replace("\n", "")
+
+                assistant = {"role": "assistant", "content": sentence,
+
+                             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+                messages.append(assistant)
+
+                save_chat_history()
+
+                response_data = {"response": sentence}
+
+
+
+                # yield JSON 字符串，并以 \n\n 结束，便于客户端解析每个独立的块 (Server-Sent Events 风格，但此处仅用于分块)
+
+                # 这里的 Response 是字节流，必须 encode
+
+                yield (json.dumps(response_data, ensure_ascii=False) + '\n\n').encode('utf-8')
+
+
+
+                # 可以在这里添加一个短暂的延迟，模拟 AI 思考和逐句回复的实时感
+
+                time.sleep(1)
+
+
+
+        # 按概率返回不同的回复方式
+
+        rd = random.random()
+
+        if rd <= 0.95:
+
+            return Response(
+
+                generate_stream(),
+
+                mimetype='application/json; charset=utf-8'  # 使用 application/json; charset=utf-8 仍然是可行的
+
+            )
+
+        else:
+
+            re = Response(
+
+                json.dumps({"response": outputs}, ensure_ascii=False),
+
+                mimetype='application/json; charset=utf-8'
+
+            )
+
+            assistant = {"role": "assistant", "content": outputs, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+            messages.append(assistant)
+
+            return re
+
+
+
+    except Exception as e:
+
+        return jsonify({"error": f"处理失败: {str(e)}"}), 500
+
+
+
+
+
+@app.route('/chat', methods=['POST'])
+
+@token_required
+
+def chat_completions():
+
+    # 获取传来的消息
+
+    data = request.json
+
+    data = data['messages']
+
+    return chat_return(data)
+
+使修改后的代码适配新的chat接口
+
+实现流式多气泡显示：将 AI 回复从单次接收改为流式接收，将每个句子显示在不同的气泡中，每个气泡都显示时间戳。

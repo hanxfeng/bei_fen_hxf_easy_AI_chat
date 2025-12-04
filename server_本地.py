@@ -5,6 +5,8 @@ from functools import wraps
 import logging
 from datetime import datetime
 import os
+import time
+import random
 
 # 基本配置
 url = "http://localhost:11434/api/generate"  # ollama的url
@@ -111,7 +113,7 @@ def token_required(f):
     return decorated_function
 
 
-def chat_completions_model(user, temperature=0.5):
+def chat_completions_model(user, temperature=0.9):
     """与Ollama通信生成回复，user格式: {"role": "user", "content": "...", "time":"..."}"""
     global messages
     try:
@@ -145,26 +147,71 @@ def save_chat_history():
         print(f"保存聊天记录失败: {e}")
 
 
+def chat_return(user):
+    global system_prompt, messages
+
+    user = {"role": "user", "content": user, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+    try:
+        # 生成回复
+        outputs = chat_completions_model(user=user)
+
+        # 定义流式生成器函数
+        def generate_stream():
+            """将完整的outputs分割并逐块返回的生成器"""
+
+            fragments = outputs.split("。")
+
+            # 最后一个分片可能为空或是不完整的句子，我们需要处理它
+            for i, fragment in enumerate(fragments):
+                if not fragment:
+                    continue
+
+                # 重新拼接句号，作为完整的一句话
+                sentence = fragment + "。" if i < len(fragments) - 1 or outputs.endswith("。") else fragment
+                sentence = sentence.replace("\n", "")
+                assistant = {"role": "assistant", "content": sentence,
+                             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+                messages.append(assistant)
+                save_chat_history()
+                response_data = {"response": sentence}
+
+                # yield JSON 字符串，并以 \n\n 结束，便于客户端解析每个独立的块 (Server-Sent Events 风格，但此处仅用于分块)
+                # 这里的 Response 是字节流，必须 encode
+                yield (json.dumps(response_data, ensure_ascii=False) + '\n\n').encode('utf-8')
+
+                # 可以在这里添加一个短暂的延迟，模拟 AI 思考和逐句回复的实时感
+                time.sleep(1)
+
+        # 按概率返回不同的回复方式
+        rd = random.random()
+        if rd <= 0.95:
+            return Response(
+                generate_stream(),
+                mimetype='application/json; charset=utf-8'  # 使用 application/json; charset=utf-8 仍然是可行的
+            )
+        else:
+            re = Response(
+                json.dumps({"response": outputs}, ensure_ascii=False),
+                mimetype='application/json; charset=utf-8'
+            )
+            assistant = {"role": "assistant", "content": outputs, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+            messages.append(assistant)
+            return re
+
+    except Exception as e:
+        return jsonify({"error": f"处理失败: {str(e)}"}), 500
+
+
+
 @app.route('/chat', methods=['POST'])
 @token_required
 def chat_completions():
-    global messages
-    try:
-        # 获取传来的消息
-        data = request.json
+    # 获取传来的消息
+    data = request.json
+    data = data['messages']
+    return chat_return(data)
 
-        user = data.get("messages")
-        user = {"role": "user", "content": user, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-        ai_response = chat_completions_model(user=user, temperature=0.5)
-        assistant = {"role": "assistant", "content": ai_response, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-        messages.append(assistant)
-        save_chat_history()
-        re = jsonify(({"response": ai_response}))
-
-        return re
-
-    except Exception as e:
-        return jsonify({"error": f"内部错误: {str(e)}"}), 500
 
 
 # Web端
@@ -175,32 +222,12 @@ def home():
 
 
 @app.route("/generate", methods=["POST"])
+# 获取网页端传来的数据
 def generate():
-    global system_prompt, messages
-    # 获取网页端传来的数据
     conversation = request.json.get("conversation", [])
+    conversation = conversation[-1]["content"]
 
-    if not conversation:
-        return jsonify({"error": "对话内容不能为空！"}), 400
-
-    user_question = conversation[-1]["content"]
-    user = {"role": "user", "content": user_question, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-    try:
-        # 生成回复
-        outputs = chat_completions_model(user=user)
-
-        re = Response(
-            json.dumps({"response": outputs}, ensure_ascii=False),
-            mimetype='application/json; charset=utf-8'
-        )
-        assistant = {"role": "assistant", "content": outputs, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-        messages.append(assistant)
-        save_chat_history()
-        return re
-
-    except Exception as e:
-        return jsonify({"error": f"处理失败: {str(e)}"}), 500
+    return chat_return(conversation)
 
 
 @app.route("/get_chat_history", methods=["GET"])

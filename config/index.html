@@ -38,7 +38,7 @@
             overflow: hidden; border: 1px solid var(--border-color);
         }
 
-        /* --- 3. 聊天头部 --- */
+        /* --- 3. 聊天头部 (无变化) --- */
         .chat-header {
             padding: 16px 20px;
             border-bottom: 1px solid var(--border-color);
@@ -250,7 +250,7 @@
 
 
     <script>
-        // (常量, 辅助函数, onload, settings 等均无变化)
+        // (常量和辅助函数无变化)
         const DEFAULT_USER_AVATAR = './default-user.png';
         const DEFAULT_AI_AVATAR = './default-ai.png';
 
@@ -258,7 +258,6 @@
         let isGenerating = false;
         let controller = null;
 
-        // (formatDisplayTime 函数无变化)
         function formatDisplayTime(timeString) {
             if (!timeString) return "";
             try {
@@ -275,12 +274,13 @@
                 yesterday.setDate(yesterday.getDate() - 1);
                 const timeDate = new Date(time.getFullYear(), time.getMonth(), time.getDate());
                 const addLeadingZero = (num) => num < 10 ? '0' + num : String(num);
-                const hours = addLeadingZero(time.getHours());
+                const hours = time.getHours();
                 const minutes = addLeadingZero(time.getMinutes());
-                const timeHM = `${hours}:${minutes}`;
+                const timeHM = `${addLeadingZero(hours)}:${minutes}`;
+
                 if (timeDate.getTime() === today.getTime()) {
-                    const period = time.getHours() < 12 ? '上午' : '下午';
-                    const displayHours = addLeadingZero(time.getHours() % 12 === 0 ? 12 : time.getHours() % 12);
+                    const period = hours < 12 ? '上午' : '下午';
+                    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
                     return `${period} ${displayHours}:${minutes}`;
                 } else if (timeDate.getTime() === yesterday.getTime()) {
                     return `昨天 ${timeHM}`;
@@ -300,21 +300,11 @@
             }
         }
 
-        // [!!] 修改：window.onload
         window.onload = function() {
-            // [!!] 移除 userName 加载逻辑
-            // const savedUserName = localStorage.getItem('userName') || "用户";
-
-            // [!!] 修改 aiName 默认值
             const savedAiName = localStorage.getItem('aiName') || "AI 助手";
-
-            // document.getElementById("userName").value = savedUserName; // [!!] 移除
             document.getElementById("aiName").value = savedAiName;
-
-            // [!!] 新增：页面加载时更新标题
             document.getElementById("chat-title").innerText = savedAiName;
 
-            // 头像加载逻辑不变
             const savedUserAvatar = localStorage.getItem('userAvatar') || DEFAULT_USER_AVATAR;
             const savedAiAvatar = localStorage.getItem('aiAvatar') || DEFAULT_AI_AVATAR;
             document.getElementById("userAvatarPreview").src = savedUserAvatar;
@@ -323,7 +313,6 @@
             loadChatHistory();
         };
 
-        // (previewImage 和 toggleSettings 函数无变化)
         function previewImage(event, previewId) {
             const input = event.target;
             if (input.files && input.files[0]) {
@@ -334,33 +323,25 @@
                 reader.readAsDataURL(input.files[0]);
             }
         }
+
         function toggleSettings() {
             const settingsPanel = document.getElementById('settings');
             settingsPanel.style.display = (settingsPanel.style.display === 'flex') ? 'none' : 'flex';
         }
 
-        // [!!] 修改：saveSettings
         function saveSettings() {
-            // const userName = document.getElementById("userName").value.trim(); // [!!] 移除
             const aiName = document.getElementById("aiName").value.trim();
-
-            // 用户头像保存逻辑不变
             const userAvatarSrc = document.getElementById("userAvatarPreview").src;
             const aiAvatarSrc = document.getElementById("aiAvatarPreview").src;
 
-            // if (userName) localStorage.setItem('userName', userName); // [!!] 移除
-
-            // [!!] 修改 AI 名称保存逻辑
             if (aiName) {
                 localStorage.setItem('aiName', aiName);
-                document.getElementById("chat-title").innerText = aiName; // 立即更新标题
+                document.getElementById("chat-title").innerText = aiName;
             } else {
-                // 如果用户清空了名称，则恢复默认
-                localStorage.removeItem('aiName'); // 移除存储
-                document.getElementById("chat-title").innerText = "AI 助手"; // 恢复默认标题
+                localStorage.removeItem('aiName');
+                document.getElementById("chat-title").innerText = "AI 助手";
             }
 
-            // 头像保存逻辑不变
             if (userAvatarSrc.startsWith('data:image') || userAvatarSrc.includes(DEFAULT_USER_AVATAR)) {
                 localStorage.setItem('userAvatar', userAvatarSrc);
             }
@@ -370,7 +351,6 @@
             toggleSettings();
         }
 
-        // (loadChatHistory 函数无变化)
         function loadChatHistory() {
             const userAvatarSrc = localStorage.getItem('userAvatar') || DEFAULT_USER_AVATAR;
             const aiAvatarSrc = localStorage.getItem('aiAvatar') || DEFAULT_AI_AVATAR;
@@ -420,7 +400,6 @@
                 .catch(error => console.error("加载聊天记录失败:", error));
         }
 
-        // (keydown listener 无变化)
         document.getElementById("prompt").addEventListener("keydown", function (event) {
             if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
@@ -428,7 +407,7 @@
             }
         });
 
-        // [!!] 修改：generateResponse
+        // [!!] 核心修改函数：generateResponse
         async function generateResponse() {
             const promptInput = document.getElementById("prompt");
             const responseDiv = document.getElementById("response");
@@ -448,21 +427,16 @@
             const userAvatarSrc = localStorage.getItem('userAvatar') || DEFAULT_USER_AVATAR;
             const aiAvatarSrc = localStorage.getItem('aiAvatar') || DEFAULT_AI_AVATAR;
 
-            // [!!] 修改 aiName 默认值
-            const aiName = localStorage.getItem('aiName') || "AI 助手";
-
             isGenerating = true;
             promptInput.disabled = true;
             sendButton.innerText = "停止";
             sendButton.disabled = true;
 
-            // [!!] 1. 显示头部 "正在输入"
             const headerIndicator = document.getElementById('header-typing-indicator');
-            // [!!] 修改：使用 aiName 变量
             headerIndicator.innerText = `(对方正在输入中...)`;
             headerIndicator.style.display = 'inline';
 
-            // --- 2. 创建用户消息 (无变化) ---
+            // --- 1. 创建用户消息 ---
             const userTime = new Date();
             const userMessageWrapper = document.createElement('div');
             userMessageWrapper.className = 'message-wrapper user';
@@ -488,13 +462,13 @@
             conversationHistory.push({ role: 'user', content: prompt, time: userTime.toISOString() });
             responseDiv.scrollTop = responseDiv.scrollHeight;
 
-            // --- 4. 准备流式接收 (无变化) ---
+            // --- 2. 准备流式接收和变量 ---
             controller = new AbortController();
-            let aiFinalContent = "";
-            let aiMessageWrapper = null;
-            let aiBubble = null;
-            let aiTimeDiv = null;
-            let isFirstChunk = true;
+
+            let streamErrorContent = "";
+            let buffer = '';
+
+            // [!!] 移除: lastAiTimeDiv, 因为每个气泡都会立即显示时间
 
             try {
                 const response = await fetch('/generate', {
@@ -503,8 +477,16 @@
                     body: JSON.stringify({ conversation: conversationHistory }),
                     signal: controller.signal
                 });
+
+                if (!response.body) {
+                    throw new Error("Response body is null");
+                }
+
+                sendButton.disabled = false; // 启用停止按钮
+
                 const reader = response.body.getReader();
-                const decoder = new TextDecoder();
+                const decoder = new TextDecoder("utf-8");
+
                 const stream = new ReadableStream({
                     start(controller) {
                         function push() {
@@ -513,42 +495,55 @@
                                     controller.close();
                                     return;
                                 }
-                                const chunk = decoder.decode(value, { stream: true });
-                                try {
-                                    const data = chunk;
-                                    const content = data.split('"')[3];
-                                    aiFinalContent = content;
 
-                                    if (isFirstChunk) {
-                                        isFirstChunk = false;
+                                buffer += decoder.decode(value, { stream: true });
+                                const parts = buffer.split('\n\n');
+                                buffer = parts.pop() || '';
 
-                                        aiMessageWrapper = document.createElement('div');
-                                        aiMessageWrapper.className = 'message-wrapper ai';
-                                        const aiAvatar = document.createElement('img');
-                                        aiAvatar.className = 'avatar-img';
-                                        aiAvatar.src = aiAvatarSrc;
-                                        aiAvatar.alt = "AI Avatar";
-                                        const aiBubbleTimeContainer = document.createElement('div');
-                                        aiBubbleTimeContainer.className = 'bubble-time-container';
-                                        aiBubble = document.createElement('div');
-                                        aiBubble.className = 'message ai-message';
-                                        aiTimeDiv = document.createElement('div');
-                                        aiTimeDiv.className = 'message-time';
-                                        aiTimeDiv.innerText = "";
-                                        aiBubbleTimeContainer.appendChild(aiBubble);
-                                        aiBubbleTimeContainer.appendChild(aiTimeDiv);
-                                        aiMessageWrapper.appendChild(aiAvatar);
-                                        aiMessageWrapper.appendChild(aiBubbleTimeContainer);
-                                        responseDiv.appendChild(aiMessageWrapper);
+                                parts.forEach(part => {
+                                    if (part) {
+                                        try {
+                                            const jsonPart = JSON.parse(part);
+                                            const sentence = jsonPart.response;
+
+                                            if (!sentence) return;
+
+                                            // --- 创建新的气泡 ---
+                                            const newAiMessageWrapper = document.createElement('div');
+                                            newAiMessageWrapper.className = 'message-wrapper ai';
+
+                                            const aiAvatar = document.createElement('img');
+                                            aiAvatar.className = 'avatar-img';
+                                            aiAvatar.src = aiAvatarSrc;
+                                            aiAvatar.alt = "AI Avatar";
+
+                                            const aiBubbleTimeContainer = document.createElement('div');
+                                            aiBubbleTimeContainer.className = 'bubble-time-container';
+
+                                            const newAiBubble = document.createElement('div');
+                                            newAiBubble.className = 'message ai-message';
+                                            newAiBubble.innerHTML = `<div class="message-content">${sentence}</div>`;
+
+                                            const newAiTimeDiv = document.createElement('div');
+                                            newAiTimeDiv.className = 'message-time';
+
+                                            // [!!] 核心修改：每个气泡出现时立即设置时间戳
+                                            newAiTimeDiv.innerText = formatDisplayTime(new Date());
+
+                                            aiBubbleTimeContainer.appendChild(newAiBubble);
+                                            aiBubbleTimeContainer.appendChild(newAiTimeDiv);
+                                            newAiMessageWrapper.appendChild(aiAvatar);
+                                            newAiMessageWrapper.appendChild(aiBubbleTimeContainer);
+                                            responseDiv.appendChild(newAiMessageWrapper);
+
+                                            responseDiv.scrollTop = responseDiv.scrollHeight;
+
+                                        } catch (e) {
+                                            console.error("流式 JSON 解析失败:", part, e);
+                                        }
                                     }
+                                });
 
-                                    if (aiBubble) {
-                                        aiBubble.innerHTML = `<div class="message-content">${content}</div>`;
-                                        responseDiv.scrollTop = responseDiv.scrollHeight;
-                                    }
-
-                                    if (data.done) controller.close();
-                                } catch (e) { console.error("Error parsing data:", e); }
                                 push();
                             });
                         }
@@ -556,66 +551,54 @@
                     }
                 });
                 await new Response(stream).text();
+
             } catch (error) {
+                // 在 catch 块中记录错误内容
                 if (error.name === "AbortError") {
-                    aiFinalContent = aiFinalContent ? aiFinalContent + "\n(回答已停止)" : "(回答已停止)";
+                    streamErrorContent = "(回答已停止)";
                 } else {
-                    aiFinalContent = `(请求失败：${error})`;
+                    streamErrorContent = `(请求失败：${error})`;
                 }
             } finally {
                 isGenerating = false;
                 promptInput.disabled = false;
-                sendButton.innerText = "生成";
+                sendButton.innerText = "发送";
                 sendButton.disabled = false;
 
-                // [!!] 1. 隐藏头部 "正在输入" (无变化)
-                const headerIndicator = document.getElementById('header-typing-indicator');
                 headerIndicator.style.display = 'none';
                 headerIndicator.innerText = '';
 
                 const aiTime = new Date();
 
-                // [!!] 3. 检查状态以更新或创建气泡 (无变化)
-                if (isFirstChunk && aiFinalContent) {
-                    aiMessageWrapper = document.createElement('div');
-                    aiMessageWrapper.className = 'message-wrapper ai';
+                // [!!] 移除: lastAiTimeDiv 的更新逻辑。只保留错误处理逻辑。
+                // 如果流一开始就出错了（没有气泡生成），则创建一个错误气泡
+                if (streamErrorContent) {
+                    const errorWrapper = document.createElement('div');
+                    errorWrapper.className = 'message-wrapper ai';
                     const aiAvatar = document.createElement('img');
                     aiAvatar.className = 'avatar-img';
                     aiAvatar.src = aiAvatarSrc;
                     aiAvatar.alt = "AI Avatar";
-                    const aiBubbleTimeContainer = document.createElement('div');
-                    aiBubbleTimeContainer.className = 'bubble-time-container';
-                    aiBubble = document.createElement('div');
-                    aiBubble.className = 'message ai-message';
-                    aiBubble.innerHTML = `<div class="message-content">${aiFinalContent}</div>`;
-                    aiTimeDiv = document.createElement('div');
-                    aiTimeDiv.className = 'message-time';
-                    aiTimeDiv.innerText = formatDisplayTime(aiTime);
-                    aiBubbleTimeContainer.appendChild(aiBubble);
-                    aiBubbleTimeContainer.appendChild(aiTimeDiv);
-                    aiMessageWrapper.appendChild(aiAvatar);
-                    aiMessageWrapper.appendChild(aiBubbleTimeContainer);
-                    responseDiv.appendChild(aiMessageWrapper);
-
-                } else if (!isFirstChunk) {
-                    if (aiBubble && aiFinalContent) {
-                         aiBubble.innerHTML = `<div class="message-content">${aiFinalContent}</div>`;
-                    }
-                    if (aiTimeDiv) {
-                        aiTimeDiv.innerText = formatDisplayTime(aiTime);
-                    }
+                    const errorBubbleTimeContainer = document.createElement('div');
+                    errorBubbleTimeContainer.className = 'bubble-time-container';
+                    const errorBubble = document.createElement('div');
+                    errorBubble.className = 'message ai-message';
+                    errorBubble.innerHTML = `<div class="message-content">${streamErrorContent}</div>`;
+                    const errorTimeDiv = document.createElement('div');
+                    errorTimeDiv.className = 'message-time';
+                    errorTimeDiv.innerText = formatDisplayTime(aiTime);
+                    errorBubbleTimeContainer.appendChild(errorBubble);
+                    errorBubbleTimeContainer.appendChild(errorTimeDiv);
+                    errorWrapper.appendChild(aiAvatar);
+                    errorWrapper.appendChild(errorBubbleTimeContainer);
+                    responseDiv.appendChild(errorWrapper);
                 }
 
-                // [!!] 4. 保存历史 (无变化)
-                if (aiFinalContent) {
-                    conversationHistory.push({ role: 'assistant', content: aiFinalContent, time: aiTime.toISOString() });
-                }
-
+                // 确保用户可以看到最新的内容
                 responseDiv.scrollTop = responseDiv.scrollHeight;
             }
         }
 
-        // (stopResponse 函数无变化)
         function stopResponse() {
             if (controller) {
                 controller.abort();
